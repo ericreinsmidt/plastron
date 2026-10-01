@@ -46,3 +46,11 @@ BR2_PACKAGE_HOST_MTOOLS=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS_BOOT_SCRIPT=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS_BOOT_SCRIPT_SOURCE="$(BR2_EXTERNAL_PX2_PATH)/board/px2/boot.cmd"
+
+# Display test tools: modetest sets a mode and draws a pattern, to check the
+# panel lights from userspace (the kernel leaves it dark; see boot.cmd)
+BR2_PACKAGE_LIBDRM=y
+BR2_PACKAGE_LIBDRM_INSTALL_TESTS=y
+
+# "TortOS go brrr" at boot, until TortOS has its own boot animation
+BR2_PACKAGE_BRRR=y

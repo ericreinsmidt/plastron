@@ -1,0 +1,7 @@
+config BR2_PACKAGE_BRRR
+	bool "brrr"
+	select BR2_PACKAGE_LIBDRM
+	help
+	  Says "TortOS go brrr" on the screen at boot, until TortOS has a
+	  boot animation of its own. The kernel leaves the panel dark (see
+	  board/px2/boot.cmd), so this is also the first thing to light it.

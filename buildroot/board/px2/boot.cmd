@@ -8,6 +8,13 @@
 setenv kernel_addr_r 0x02200000
 load ${devtype} ${devnum}:${distro_bootpart} ${kernel_addr_r} /Image
 load ${devtype} ${devnum}:${distro_bootpart} ${fdt_addr_r} /rk3326s-gkd-pixel2.dtb
-# panic=30: keep a panic message on screen instead of rebooting after 1 s
-setenv bootargs "root=/dev/mmcblk0p2 rootwait rw console=tty1 console=ttyS2,1500000 panic=30"
+#
+# drm_kms_helper.fbdev_emulation=0 leaves the panel dark until userspace sets
+# a mode. With the kernel's console on it, lighting the panel was 1.19 s of
+# boot that everything else waited for; this way it happens when TortOS opens
+# the display, alongside its own startup. For kernel messages on screen while
+# debugging, take that argument out (and panic=30 then keeps a panic visible
+# instead of rebooting after 1 s). No console=ttyS2: the serial port has no
+# one on the other end, and every kernel message was being written to it.
+setenv bootargs "root=/dev/mmcblk0p2 rootwait rw console=tty1 panic=30 drm_kms_helper.fbdev_emulation=0"
 booti ${kernel_addr_r} - ${fdt_addr_r}

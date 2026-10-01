@@ -1,3 +1,5 @@
+include $(sort $(wildcard $(BR2_EXTERNAL_PX2_PATH)/package/*/*.mk))
+
 # The Pixel 2 device tree comes from ROCKNIX (board/px2/dts), including its
 # own rk3326.dtsi, which replaces mainline's the same way ROCKNIX's build does.
 define PX2_LINUX_ADD_DTS
