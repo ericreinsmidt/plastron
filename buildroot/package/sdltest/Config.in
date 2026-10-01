@@ -1,0 +1,7 @@
+config BR2_PACKAGE_SDLTEST
+	bool "sdltest"
+	depends on BR2_PACKAGE_SDL2_KMSDRM && BR2_PACKAGE_SDL2_OPENGLES
+	help
+	  Times how long SDL2 takes to come up the way TortOS uses it
+	  (KMS/DRM, OpenGL ES renderer) and checks that presenting a
+	  rotated landscape frame keeps full speed. "sdltest [frames]".

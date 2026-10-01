@@ -55,3 +55,14 @@ BR2_PACKAGE_LIBDRM_INSTALL_TESTS=y
 
 # "TortOS go brrr" at boot, until TortOS has its own boot animation
 BR2_PACKAGE_BRRR=y
+
+# Graphics: Mesa's Panfrost for the Mali-G31 (our package, see its Config.in),
+# SDL2 drawing straight to the display with OpenGL ES, as TortOS will, and
+# kmscube to test GPU to screen. (glmark2's DRM build needs udev, which this
+# system doesn't have.)
+BR2_PACKAGE_MESA3D_PX2=y
+BR2_PACKAGE_SDL2=y
+BR2_PACKAGE_SDL2_KMSDRM=y
+BR2_PACKAGE_SDL2_OPENGLES=y
+BR2_PACKAGE_KMSCUBE=y
+BR2_PACKAGE_SDLTEST=y

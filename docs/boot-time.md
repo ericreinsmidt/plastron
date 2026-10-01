@@ -203,6 +203,23 @@ than hoped, but it showed something useful: Rockchip's loader reads fast
 (about 10 MB/s), so most of the 0.65 s before U-Boot is Rockchip's own memory
 setup, which replacing their loader wouldn't change.
 
+## Graphics start-up
+
+Not boot time exactly, but the same question for TortOS: how long until it
+can draw. Measured with `sdltest` (SDL2 drawing straight to the display with
+OpenGL ES on Panfrost, as TortOS will), with the screen already on:
+
+| | First launch | After that (shader cache warm) |
+|---|---|---|
+| SDL video start | 26 ms | 29 ms |
+| Window | 44 ms | 44 ms |
+| GL renderer | 128 ms | 76 ms |
+| First frame on screen | 76 ms | 46 ms |
+| **Start to picture** | **273 ms** | **193 ms** |
+
+Presenting a 640x480 landscape frame rotated onto the portrait panel runs at
+the panel's full 60 fps. On the Brick, SDL and GL alone took about 620 ms.
+
 ## Tried, and didn't help
 
 - **A compressed kernel.** Half the size, so U-Boot read it in 364 ms instead
