@@ -1,0 +1,17 @@
+---
+ init/initramfs.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/init/initramfs.c b/init/initramfs.c
+index 58db15f..8968225 100644
+--- a/init/initramfs.c
++++ b/init/initramfs.c
+@@ -728,7 +728,7 @@ static void __init do_populate_rootfs(void *unused, async_cookie_t cookie)
+ #ifdef CONFIG_BLK_DEV_RAM
+ 		populate_initrd_image(err);
+ #else
+-		printk(KERN_EMERG "Initramfs unpacking failed: %s\n", err);
++		printk(KERN_DEBUG "Initramfs unpacking failed: %s\n", err);
+ #endif
+ 	}
+ 

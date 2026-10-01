@@ -1,0 +1,4 @@
+# Build output, copied out of the Docker volume
+/out/
+# The developer's own files: SSH public key for the image
+/local/

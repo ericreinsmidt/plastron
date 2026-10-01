@@ -1,0 +1,3 @@
+#!/bin/sh
+# Records when init finished, in seconds since the kernel started
+[ "$1" = start ] && cut -d' ' -f1 /proc/uptime > /tmp/boot-done

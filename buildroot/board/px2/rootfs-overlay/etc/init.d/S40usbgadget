@@ -1,0 +1,40 @@
+#!/bin/sh
+# USB networking over the cable (CDC ECM). The MAC addresses are fixed, so
+# the Mac keeps one interface for this device and the Pixel's IPv6
+# link-local address never changes: fe80::70:78ff:fe32:1
+GADGET=/sys/kernel/config/usb_gadget/px2
+
+case "$1" in
+start)
+	# The port's role switch starts out as host. Make it a device, so the
+	# gadget actually connects (only ever this way: going host while the
+	# Mac supplies VBUS is what ROCKNIX's script warns can fry a board).
+	for role in /sys/class/usb_role/*/role; do
+		[ -w "$role" ] && echo device > "$role"
+	done
+	for _ in 1 2 3 4 5 6 7 8 9 10; do
+		[ -n "$(ls /sys/class/udc 2>/dev/null)" ] && break
+		sleep 0.1
+	done
+	mountpoint -q /sys/kernel/config || mount -t configfs none /sys/kernel/config
+	mkdir -p "$GADGET"
+	cd "$GADGET" || exit 1
+	echo 0x1d6b > idVendor               # Linux Foundation
+	echo 0x0104 > idProduct              # Multifunction Composite Gadget
+	echo 0x0200 > bcdUSB
+	mkdir -p strings/0x409
+	echo "TortOS" > strings/0x409/manufacturer
+	echo "GKD Pixel 2" > strings/0x409/product
+	mkdir -p functions/ecm.usb0
+	echo 02:70:78:32:00:01 > functions/ecm.usb0/dev_addr
+	echo 02:70:78:32:00:02 > functions/ecm.usb0/host_addr
+	mkdir -p configs/c.1/strings/0x409
+	echo "ECM" > configs/c.1/strings/0x409/configuration
+	[ -e configs/c.1/ecm.usb0 ] || ln -s "$GADGET/functions/ecm.usb0" configs/c.1/
+	ls /sys/class/udc | head -n1 > UDC
+	ip link set usb0 up
+	;;
+stop)
+	echo "" > "$GADGET/UDC"
+	;;
+esac
