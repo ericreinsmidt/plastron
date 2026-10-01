@@ -13,8 +13,14 @@ From the moment the chip comes out of reset:
 | **Picture on screen** ("TortOS go brrr") | **about 2.2 s** |
 | Startup scripts done | about 2.5 s |
 
-Add the power button on top: the power chip waits for the press to be held
-for a moment before it switches on, well under a second.
+Add the power button on top. The power chip only switches on once the button
+has been held for a moment, about 0.7 s into the press (measured from a
+video: press, then the picture about 2.9 s later). It starts while the button
+is still down, not on release.
+
+| | Time |
+|---|---|
+| **Power button pressed to picture on screen** | **about 2.9 s** |
 
 For comparison, GKD's own system took about 16 s just from the kernel
 starting to its menu program running, and official ROCKNIX took 33 s to its
@@ -221,5 +227,13 @@ setup, which replacing their loader wouldn't change.
   showed most of that 0.65 s is Rockchip's memory setup, which would stay.
 - **A read-only system drive.** It would mount in a few milliseconds and
   can't be damaged by pulling the power.
+- **A shorter press to power on.** The power chip (RK817) waits about 0.7 s
+  of holding before it switches on, which comes straight off the time from
+  pressing power. It may be a setting in the chip.
+- **The screen's own waits, against the datasheet.** Several are far longer
+  than this kind of panel controller needs. Only worth it if the screen turns
+  out to be what TortOS waits for: right now the screen and the software
+  finish at about the same time, and TortOS will add its own startup to the
+  software side.
 - **Fewer startup scripts.** TortOS will start directly instead of after a
   list of general-purpose services.
