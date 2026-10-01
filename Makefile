@@ -5,7 +5,12 @@ IMAGE := tortos-px2-builder
 VOLUME := tortos-px2-work
 # The x86 packing step runs on the same Debian the builder starts from
 BASE_IMAGE := debian@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
-DOCKER_RUN := docker run --rm -t -v $(CURDIR):/src:ro -v $(VOLUME):/work $(IMAGE)
+# TortOS and Diatom are built from their own repositories, mounted read-only.
+# TortOS's port work is on its gkd-pixel-2 branch, in this worktree.
+TORTOS_SRC ?= $(HOME)/Developer/TortOS/.claude/worktrees/tortos-gkd-pixel2-port-be626c
+DIATOM_SRC ?= $(HOME)/Developer/diatom
+SOURCES := -v $(TORTOS_SRC):/tortos:ro -v $(DIATOM_SRC):/diatom:ro
+DOCKER_RUN := docker run --rm -t -v $(CURDIR):/src:ro $(SOURCES) -v $(VOLUME):/work $(IMAGE)
 
 .PHONY: all builder volume image base bootloader shell linux-rebuild copy-out clean-output
 
@@ -24,7 +29,7 @@ image: builder volume
 	$(MAKE) copy-out
 
 base: builder volume
-	docker run --rm -t -e FLAVOR=base -v $(CURDIR):/src:ro -v $(VOLUME):/work $(IMAGE) sh /src/scripts/build.sh
+	docker run --rm -t -e FLAVOR=base -v $(CURDIR):/src:ro $(SOURCES) -v $(VOLUME):/work $(IMAGE) sh /src/scripts/build.sh
 	$(MAKE) copy-out OUTPUT=output-base CARD=sdcard-base.img
 
 # U-Boot, packed into buildroot/board/px2/bootloader/u-boot-px2.bin. Rarely
@@ -48,7 +53,7 @@ copy-out:
 	@ls -l out/$(CARD)
 
 shell: builder volume
-	docker run --rm -it -v $(CURDIR):/src:ro -v $(VOLUME):/work $(IMAGE) bash
+	docker run --rm -it -v $(CURDIR):/src:ro $(SOURCES) -v $(VOLUME):/work $(IMAGE) bash
 
 clean-output:
 	docker run --rm -v $(VOLUME):/work $(IMAGE) rm -rf /work/output

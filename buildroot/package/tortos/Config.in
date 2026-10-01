@@ -1,0 +1,9 @@
+config BR2_PACKAGE_TORTOS
+	bool "tortos"
+	depends on BR2_PACKAGE_SDL2_IMAGE
+	depends on BR2_PACKAGE_SDL2_TTF
+	depends on BR2_PACKAGE_FFMPEG
+	help
+	  The TortOS launcher (tortos) and its music engine (muse),
+	  built from the TortOS repository, mounted at /tortos in the
+	  build container.
