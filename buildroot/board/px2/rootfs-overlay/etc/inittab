@@ -22,6 +22,7 @@ null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 
 # A press of the power button shuts down cleanly
 ::respawn:/usr/sbin/powerkey
+::respawn:/usr/sbin/jackswitch
 
 # Busybox runs these before it kills the remaining processes, so stop them
 # here first: anything still holding a file open for writing (kmscube, via

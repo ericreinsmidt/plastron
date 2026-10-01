@@ -8,3 +8,6 @@ if [ -f "$KEYS" ]; then
 	install -d -m 700 "$TARGET_DIR/root/.ssh"
 	install -m 600 "$KEYS" "$TARGET_DIR/root/.ssh/authorized_keys"
 fi
+
+# Finder leaves .DS_Store files in the overlay folders on a Mac
+find "$TARGET_DIR" -name .DS_Store -delete

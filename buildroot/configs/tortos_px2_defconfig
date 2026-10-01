@@ -69,3 +69,13 @@ BR2_PACKAGE_SDLTEST=y
 
 # A press of the power button shuts down cleanly
 BR2_PACKAGE_POWERKEY=y
+BR2_PACKAGE_JACKSWITCH=y
+
+# Sound tools: amixer for the mixer controls, aplay and speaker-test for
+# playback checks. TortOS talks to ALSA directly.
+BR2_PACKAGE_ALSA_UTILS=y
+BR2_PACKAGE_ALSA_UTILS_AMIXER=y
+BR2_PACKAGE_ALSA_UTILS_APLAY=y
+BR2_PACKAGE_ALSA_UTILS_SPEAKER_TEST=y
+# BR2_PACKAGE_ALSA_UTILS_ALSACTL is not set
+# BR2_PACKAGE_ALSA_UTILS_ALSAMIXER is not set
