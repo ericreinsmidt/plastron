@@ -9,9 +9,9 @@ From the moment the chip comes out of reset:
 
 | | Time |
 |---|---|
-| Kernel starts | 1.47 s |
-| **Picture on screen** ("TortOS go brrr") | **about 2.4 s** |
-| Startup scripts done | about 2.8 s |
+| Kernel starts | 1.38 s |
+| **Picture on screen** ("TortOS go brrr") | **about 2.26 s** |
+| Startup scripts done | about 2.6 s |
 
 Add the power button on top: the power chip waits for the press to be held
 for a moment before it switches on, well under a second.
@@ -20,14 +20,14 @@ For comparison, GKD's own system took about 16 s just from the kernel
 starting to its menu program running, and official ROCKNIX took 33 s to its
 menu.
 
-Where the 2.4 s goes now:
+Where the 2.26 s goes now:
 
 | Step | Time | Whose |
 |---|---|---|
 | Rockchip's memory setup and first loader | 0.67 s | Rockchip's closed blobs |
 | U-Boot, the bootloader | 0.13 s | ours |
-| U-Boot reading the 15 MB kernel off the card | 0.70 s | ours |
-| Kernel, until the picture | 0.92 s | ours |
+| U-Boot reading the 12.5 MB kernel off the card | 0.56 s | ours |
+| Kernel, until the picture | 0.88 s | ours |
 
 ## How it's measured
 
@@ -161,6 +161,29 @@ display driver power the screen up directly.
 about 2.4 s.** The first program starts a little later than before (0.76 to
 0.80 s instead of 0.70), which is still being looked into.
 
+### 10. The kernel was cut down again
+
+A second pass over what was still big in the kernel, and what it was for:
+
+- A kernel message buffer sized for a server: its index alone was 352 KB.
+- USB's host side and every kind of USB gadget, when all the Pixel 2 does
+  over USB (in development) is look like a network adapter.
+- Unpacking code for a startup ramdisk we don't have, and compression code
+  for memory tricks we don't use.
+- Virtual terminals and the serial port driver, now that nothing shows a
+  console.
+- Group controls for services, desktop scheduling tweaks, suspend and
+  hibernate, hardware tracing, and a few unused features.
+
+The kernel went from **15.0 MB to 12.5 MB**, so U-Boot reads it in 0.56 s
+instead of 0.70.
+
+**The kernel starts 1.38 s after reset instead of 1.47, and the picture is on
+screen about 2.26 s after reset.**
+
+Bonus: with USB device-only, plugging the cable in after the Pixel has booted
+now works. Before, it only connected if plugged in at boot.
+
 ## Tried, and didn't help
 
 - **A compressed kernel.** Half the size, so U-Boot read it in 364 ms instead
@@ -176,9 +199,10 @@ about 2.4 s.** The first program starts a little later than before (0.76 to
 - **Run the CPU faster in U-Boot.** It runs at 400 MHz until the kernel takes
   over. Faster would help everything before the kernel, and could make a
   compressed kernel pay off. Needs the CPU's voltage raised first, carefully.
-- **A smaller kernel still.** U-Boot reads it at about 35 ms per MB. Starting
+- **A smaller kernel still.** U-Boot reads it at about 45 ms per MB. Starting
   over from an empty kernel config and adding only what the Pixel 2 uses
-  should shrink it a lot.
+  should shrink it a lot. Networking (about 1.9 MB) is only there for working
+  on it over USB, so a release build could leave it out.
 - **Replace Rockchip's closed first-stage loaders** (0.67 s) with U-Boot's
   own, which could also load the kernel directly.
 - **A read-only system drive.** It would mount in a few milliseconds and
