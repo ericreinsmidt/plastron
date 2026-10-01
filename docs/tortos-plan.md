@@ -39,7 +39,7 @@ protocol already marks: TortOS drops it before `RUN` and `RESUME`, Diatom
 takes it to present and drops it when it stops (before `PAUSED` and `EXIT`),
 and TortOS takes it back. The protocol itself doesn't change.
 
-This is already half proven here: `brrr` hands the display to `kmscube` this
+This is already half proven here: the boot splash hands the display to `kmscube` this
 way with no black frame. The other half, handing it back to an SDL program
 that has been drawing all along, is the first thing to test.
 

@@ -1,0 +1,9 @@
+config BR2_PACKAGE_SPLASH
+	bool "splash"
+	select BR2_PACKAGE_LIBDRM
+	help
+	  TortOS's boot animation, from the moment the panel lights until
+	  TortOS takes the display over - which it does as soon as it is
+	  ready, never waiting for the animation. The kernel leaves the
+	  panel dark (see board/px2/boot.cmd), so this is also the first
+	  thing to light it.

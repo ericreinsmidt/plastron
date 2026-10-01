@@ -1,5 +1,0 @@
-#!/bin/sh
-# "TortOS go brrr" on screen. Started from /etc/inittab as the very first
-# thing, not by rcS, so it doesn't wait for the rest of system setup. It
-# stays running: the picture lasts only as long as its framebuffer does.
-[ "$1" = start ] && /usr/bin/brrr > /dev/null 2>&1 &

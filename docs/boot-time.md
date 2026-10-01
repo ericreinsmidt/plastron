@@ -10,8 +10,9 @@ From the moment the chip comes out of reset:
 | | Time |
 |---|---|
 | Kernel starts | 1.33 s |
-| **Picture on screen** ("TortOS go brrr") | **about 2.2 s** |
+| **Picture on screen** (the boot animation starts) | **about 2.2 s** |
 | Startup scripts done | about 2.5 s |
+| **TortOS's shelf on screen**, ready to use | **about 4.0 s** |
 
 Add the power button on top. The power chip only switches on once the button
 has been held for a moment, about 0.7 s into the press (measured from a
@@ -21,6 +22,7 @@ is still down, not on release.
 | | Time |
 |---|---|
 | **Power button pressed to picture on screen** | **about 2.9 s** |
+| **Power button pressed to TortOS's shelf** | **about 4.7 s** |
 
 For comparison, GKD's own system took about 16 s just from the kernel
 starting to its menu program running, and official ROCKNIX took 33 s to its
@@ -45,8 +47,8 @@ Nothing here uses a serial console (that would mean soldering), so:
 - **The kernel** stamps every log line with the time since it started
   (`dmesg`). For a full breakdown, booting once with `initcall_debug` times
   every driver.
-- **The picture:** `brrr` logs `brrr: panel lit at ... s` to the kernel log
-  the moment its picture is on screen.
+- **The picture:** the splash (`brrr` until 2026-10-01) logs `splash: panel
+  lit at ... s` to the kernel log the moment its picture is on screen.
 - **Startup scripts:** the last one writes the time to `/tmp/boot-done`.
 - **Whole reboots** are timed from the Mac: from sending `reboot` until the
   Pixel shows up on USB again.
@@ -225,6 +227,41 @@ formats it (half a second, once). Every boot after that mounts it.
 **Mounting it costs 30 to 44 ms**, measured inside the boot with a timestamp
 either side. It runs after the picture is up, so the picture doesn't move,
 but TortOS will need it before it can list any games.
+
+### 14. TortOS itself, and its boot animation (the new finish line)
+
+Until now the boot ended on a picture. Now it ends on TortOS's shelf, which
+is what the boot is for, so the number that matters moved: TortOS starts from
+the card once the startup scripts have mounted it, loads its library and its
+cards, and puts the shelf up.
+
+The splash became TortOS's own boot animation (the turtle walks across,
+dashes off, and leaves the logo), played from frames prepared ahead of time,
+so it lights the panel just as fast as the old picture did. TortOS never
+waits for it: it starts alongside, and takes the screen the moment its shelf
+is ready. On the boots measured so far TortOS was ready a little after the
+animation finished, so the whole turtle shows and the logo holds for a beat.
+
+Measured from the kernel's log on 2026-10-01, after the kernel starts:
+
+| | Time |
+|---|---|
+| Panel lit, animation starts | 0.88 s |
+| Animation reaches the logo | 2.43 s |
+| TortOS's shelf on screen | 2.69 s |
+
+**Reset to shelf: about 4.0 s. Power button to shelf: about 4.7 s.** Most of
+the 1.8 s between the panel lighting and the shelf is TortOS, started only
+once the startup scripts finish (about 1.3 s after the kernel): 1.05 s of its
+own startup (the library scan, the display, the font, the cards), then a
+350 ms pause it takes to swallow stray button presses from the boot before
+drawing anything. That is where to look next.
+
+Two things found on the way, both filmed: SDL's first frame after taking the
+screen over never reached it, so the shelf only appeared at the launcher's
+once-a-second backstop redraw - a second of black. TortOS now shows its first
+frame twice. And the splash, left running, came back on screen as TortOS
+exited at power-off; it now ends once TortOS has the screen.
 
 ## Graphics start-up
 

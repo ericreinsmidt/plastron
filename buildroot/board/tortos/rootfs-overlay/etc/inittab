@@ -2,13 +2,13 @@
 # with the splash first and TortOS in place of the cube and powerkey. Keep
 # the two in step.
 #
-# The picture comes first: brrr needs only /dev, which the kernel mounts
+# The picture comes first: the splash needs only /dev, which the kernel mounts
 # itself, and everything below it would otherwise run before it. There's
 # no remount of / (the kernel mounts it read-write already, and doing it
 # again cost 90 ms), no swapon (there is no swap), and no getty on tty1
 # (with the kernel console off, nothing on screen would show it).
 
-::sysinit:/etc/init.d/brrr start
+::sysinit:/etc/init.d/splash start
 ::sysinit:/bin/mount -t proc proc /proc
 ::sysinit:/bin/mkdir -p /dev/pts /dev/shm
 ::sysinit:/bin/mount -a
@@ -21,7 +21,7 @@ null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 ::sysinit:/etc/init.d/rcS
 
 # TortOS, from the card, once rcS has mounted it. It takes the display from
-# brrr's picture and handles the power button itself.
+# the splash and handles the power button itself.
 ::once:/etc/init.d/tortos
 ::respawn:/usr/sbin/jackswitch
 

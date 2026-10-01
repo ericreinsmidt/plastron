@@ -1,13 +1,13 @@
 #!/bin/sh
-# kmscube, for showing off the GPU. With the TortOS splash (brrr) in the
-# image, it waits for brrr: brrr lets go of the display once its picture is
-# up and logs "brrr: panel lit"; kmscube then takes the display over and
+# kmscube, for showing off the GPU. With TortOS's splash in the image, it
+# waits for the splash: the splash lets go of the display once its picture is
+# up and logs "splash: panel lit"; kmscube then takes the display over and
 # replaces the picture. kmscube quits on any input, so it gets an input that
 # never sends any.
 start() {
 	# /dev/kmsg hands out each log line as it arrives, blocking in
-	# between, so this sleeps until brrr's line rather than polling
-	[ -x /usr/bin/brrr ] && grep -q "brrr: panel lit" < /dev/kmsg
+	# between, so this sleeps until the splash's line rather than polling
+	[ -x /usr/bin/splash ] && grep -q "splash: panel lit" < /dev/kmsg
 	echo "cube: kmscube starting at $(cut -d' ' -f1 /proc/uptime) s" > /dev/kmsg
 	tail -f /dev/null | kmscube > /dev/null 2>&1
 }
