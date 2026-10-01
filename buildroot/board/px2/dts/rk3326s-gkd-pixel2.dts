@@ -494,6 +494,14 @@
 		 * shorter before the DCS init sequence starts. Fixes the
 		 * freeze/idle screen-corruption-on-wake bug.
 		 */
+		/*
+		 * TortOS-px2: the generic-dsi driver reads wait= in hex
+		 * (simple_strtoul(val, NULL, 16)), and ROCKNIX's port wrote them
+		 * as decimal milliseconds, so 100, 120, 10 and 50 slept 256, 288,
+		 * 16 and 80 ms: 640 ms where 280 were meant, measured on the
+		 * device. They're written in hex below: 0x64, 0x78, 0xa, 0x32.
+		 * delays= is decimal (get_options) and unchanged.
+		 */
 		panel_description =
 			"G size=68,121 delays=20,150,20,120,20 format=rgb888 lanes=2 flags=0xe03",
 			"M clock=25000 horizontal=480,40,10,40 vertical=640,40,10,40 default=1",
@@ -506,7 +514,7 @@
 			"I seq=ff7701000011",
 			"I seq=b04d", "I seq=b14d", "I seq=b287", "I seq=b380", "I seq=b545", "I seq=b785", "I seq=b820",
 			"I seq=c009", "I seq=c178", "I seq=c278",
-			"I seq=d088 wait=100",
+			"I seq=d088 wait=64",
 			"I seq=e0000002",
 			"I seq=e104b006b005b007b0004444",
 			"I seq=e22020444496a0000096a00000",
@@ -523,12 +531,12 @@
 			"I seq=ff7701000013",
 			"I seq=e8000e",
 			"I seq=ff7701000000",
-			"I seq=11 wait=120",
+			"I seq=11 wait=78",
 			"I seq=ff7701000013",
-			"I seq=e8000c wait=10",
+			"I seq=e8000c wait=a",
 			"I seq=e80000",
 			"I seq=ff7701000000",
-			"I seq=29 wait=50";
+			"I seq=29 wait=32";
 		backlight = <&backlight>;
 		vdd-supply = <&vcc_mipi_lcd0>;
 		iovcc-supply = <&vcc_mipi_lcd0>;

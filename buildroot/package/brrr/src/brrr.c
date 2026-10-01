@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
@@ -38,6 +39,26 @@ static const struct {
 	{ 's', { 0x00, 0x00, 0x0f, 0x10, 0x0e, 0x01, 0x1e } },
 	{ 't', { 0x08, 0x08, 0x1c, 0x08, 0x08, 0x09, 0x06 } },
 };
+
+/* Seconds since the kernel started, as the kernel log counts them */
+static double since_boot(void)
+{
+	struct timespec now;
+
+	clock_gettime(CLOCK_BOOTTIME, &now);
+	return now.tv_sec + now.tv_nsec / 1e9;
+}
+
+/* A line in the kernel log, where boot timing is read from */
+static void log_to_kernel(const char *text)
+{
+	int fd = open("/dev/kmsg", O_WRONLY | O_CLOEXEC);
+
+	if (fd >= 0) {
+		write(fd, text, strlen(text));
+		close(fd);
+	}
+}
 
 static uint32_t *pixels;
 static uint32_t pitch_pixels, panel_w, panel_h;
@@ -115,12 +136,22 @@ int main(void)
 	}
 	struct drm_mode_map_dumb map = { .handle = create.handle };
 	drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &map);
-	pixels = mmap(NULL, create.size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, map.offset);
-	if (pixels == MAP_FAILED) {
+	uint32_t *screen = mmap(NULL, create.size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, map.offset);
+	if (screen == MAP_FAILED) {
 		perror("brrr: map buffer");
 		return 1;
 	}
+	/*
+	 * Draw in ordinary memory and copy it over once: the buffer the
+	 * display reads is uncached, and drawing into it pixel by pixel took
+	 * a quarter of a second.
+	 */
 	pitch_pixels = create.pitch / 4;
+	pixels = calloc(create.size, 1);
+	if (!pixels) {
+		perror("brrr: memory");
+		return 1;
+	}
 
 	/* Icy blue, darker toward the bottom */
 	for (int y = 0; y < 480; y++)
@@ -133,10 +164,18 @@ int main(void)
 	draw_line("TortOS go", 132, 9);
 	draw_line("brrr", 235, 16);
 
+	memcpy(screen, pixels, create.size);
+	free(pixels);
+
+	double started = since_boot();
 	if (drmModeSetCrtc(fd, res->crtcs[0], fb, 0, 0, &conn->connector_id, 1, &mode)) {
 		perror("brrr: set mode");
 		return 1;
 	}
+	char line[96];
+	snprintf(line, sizeof(line), "brrr: panel lit at %.3f s, the mode-set took %.0f ms\n",
+		 since_boot(), (since_boot() - started) * 1000);
+	log_to_kernel(line);
 
 	/* The picture lasts as long as the buffer, so stay */
 	for (;;)
