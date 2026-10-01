@@ -14,9 +14,12 @@ from their 20260901 release, the one checked on the device in phase 0. The
 plan is to carve that down, one patch at a time, to kernel.org plus the few
 patches this chip actually needs.
 
-The bootloader is ROCKNIX's prebuilt one for now
-(`buildroot/board/px2/bootloader/`), because building it their way needs
-Rockchip's x86-only packing tools. It gets replaced by our own build later.
+The bootloader is ROCKNIX's, with U-Boot rebuilt from source by
+`make bootloader` (`buildroot/board/px2/u-boot/`). Rockchip's DDR init,
+miniloader and BL31 are still their prebuilt blobs. U-Boot records its own
+timings in the device tree it hands Linux (bootstage), so where the
+bootloader spends its time can be read on the running device under
+`/proc/device-tree/bootstage`, with no serial console.
 
 ## Building
 
@@ -26,6 +29,7 @@ builds from source inside the container.
 ```sh
 make                # out/sdcard.img
 make linux-rebuild  # just the kernel, after changing its config or patches
+make bootloader     # U-Boot -> buildroot/board/px2/bootloader/u-boot-px2.bin
 make shell          # a shell in the build container
 ```
 
@@ -56,7 +60,9 @@ buildroot/                  a Buildroot external tree (BR2_EXTERNAL)
     linux.config            kernel config (ROCKNIX's RK3326 config)
     patches/linux/          kernel patches, numbered in the order they apply
     dts/                    the Pixel 2 device tree (ROCKNIX's)
-    bootloader/             ROCKNIX's prebuilt U-Boot, written at sector 64
+    bootloader/             the bootloader written at sector 64: ROCKNIX's,
+                            and ours with U-Boot rebuilt (u-boot-px2.bin)
+    u-boot/                 U-Boot's patches, ROCKNIX's sources, our config
     boot.cmd                the U-Boot boot script
     genimage.cfg            the card layout
     rootfs-overlay/         files added to the root filesystem
