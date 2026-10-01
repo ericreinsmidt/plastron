@@ -20,6 +20,9 @@ null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 ::sysinit:/bin/hostname -F /etc/hostname
 ::sysinit:/etc/init.d/rcS
 
+# A press of the power button shuts down cleanly
+::respawn:/usr/sbin/powerkey
+
 # Busybox runs these before it kills the remaining processes, so stop them
 # here first: anything still holding a file open for writing (kmscube, via
 # Mesa's shader cache) made the read-only remount fail, and every next boot

@@ -1,0 +1,5 @@
+config BR2_PACKAGE_POWERKEY
+	bool "powerkey"
+	help
+	  A press of the power button shuts the device down cleanly
+	  (poweroff when it's let go). Started by init, with respawn.

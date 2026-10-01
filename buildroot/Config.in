@@ -1,3 +1,4 @@
 source "$BR2_EXTERNAL_PX2_PATH/package/brrr/Config.in"
 source "$BR2_EXTERNAL_PX2_PATH/package/mesa3d-px2/Config.in"
 source "$BR2_EXTERNAL_PX2_PATH/package/sdltest/Config.in"
+source "$BR2_EXTERNAL_PX2_PATH/package/powerkey/Config.in"
