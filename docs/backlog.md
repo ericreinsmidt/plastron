@@ -27,3 +27,12 @@ Pixel 2, not just us:
   bigger ask: it would go to ROCKNIX first, and maybe to mainline after.
 
 ROCKNIX takes changes as pull requests on GitHub.
+
+## Wi-Fi or Bluetooth from a USB dongle
+
+The Pixel 2 has no radio of its own, but a USB Wi-Fi or Bluetooth dongle is
+known to work on it. TortOS asks the device file whether it has either radio
+(plat_has_wifi, plat_has_bluetooth) and hides the rows that need one when it
+doesn't. The Pixel's answers could check for an adapter instead of always
+saying no, and the kernel would need the dongle's driver. Waiting on a dongle
+to test with.
