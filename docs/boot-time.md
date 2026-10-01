@@ -9,9 +9,9 @@ From the moment the chip comes out of reset:
 
 | | Time |
 |---|---|
-| Kernel starts | 1.38 s |
-| **Picture on screen** ("TortOS go brrr") | **about 2.26 s** |
-| Startup scripts done | about 2.6 s |
+| Kernel starts | 1.33 s |
+| **Picture on screen** ("TortOS go brrr") | **about 2.2 s** |
+| Startup scripts done | about 2.5 s |
 
 Add the power button on top: the power chip waits for the press to be held
 for a moment before it switches on, well under a second.
@@ -20,14 +20,14 @@ For comparison, GKD's own system took about 16 s just from the kernel
 starting to its menu program running, and official ROCKNIX took 33 s to its
 menu.
 
-Where the 2.26 s goes now:
+Where the 2.2 s goes now:
 
 | Step | Time | Whose |
 |---|---|---|
-| Rockchip's memory setup and first loader | 0.67 s | Rockchip's closed blobs |
-| U-Boot, the bootloader | 0.13 s | ours |
-| U-Boot reading the 12.5 MB kernel off the card | 0.56 s | ours |
-| Kernel, until the picture | 0.88 s | ours |
+| Rockchip's memory setup and first loader | 0.65 s | Rockchip's closed blobs |
+| U-Boot, the bootloader | 0.11 s | ours |
+| U-Boot reading the 12.5 MB kernel off the card | 0.55 s | ours |
+| Kernel, until the picture | 0.87 s | ours |
 
 ## How it's measured
 
@@ -184,6 +184,19 @@ screen about 2.26 s after reset.**
 Bonus: with USB device-only, plugging the cable in after the Pixel has booted
 now works. Before, it only connected if plugged in at boot.
 
+### 11. A smaller bootloader
+
+U-Boot still carried networking, USB, display support and SPI flash, none of
+which it uses here, and it read its saved settings off the card at every boot
+only to find none. Rockchip's first loader has to read U-Boot off the card
+before it can run, so a smaller one should load sooner. It went from 752 KB
+to 540 KB.
+
+**Saved about 40 ms**: 21 ms in loading it, the rest in its own startup. Less
+than hoped, but it showed something useful: Rockchip's loader reads fast
+(about 10 MB/s), so most of the 0.65 s before U-Boot is Rockchip's own memory
+setup, which replacing their loader wouldn't change.
+
 ## Tried, and didn't help
 
 - **A compressed kernel.** Half the size, so U-Boot read it in 364 ms instead
@@ -203,8 +216,9 @@ now works. Before, it only connected if plugged in at boot.
   over from an empty kernel config and adding only what the Pixel 2 uses
   should shrink it a lot. Networking (about 1.9 MB) is only there for working
   on it over USB, so a release build could leave it out.
-- **Replace Rockchip's closed first-stage loaders** (0.67 s) with U-Boot's
-  own, which could also load the kernel directly.
+- **Replace Rockchip's closed first-stage loader** with U-Boot's own, which
+  could also load the kernel directly. Less promising than it looked: step 11
+  showed most of that 0.65 s is Rockchip's memory setup, which would stay.
 - **A read-only system drive.** It would mount in a few milliseconds and
   can't be damaged by pulling the power.
 - **Fewer startup scripts.** TortOS will start directly instead of after a
