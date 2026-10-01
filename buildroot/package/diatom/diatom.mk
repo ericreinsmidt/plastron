@@ -7,19 +7,18 @@
 DIATOM_VERSION = local
 DIATOM_SITE = /diatom
 DIATOM_SITE_METHOD = local
-DIATOM_DEPENDENCIES = sdl2 host-pkgconf
+DIATOM_DEPENDENCIES = sdl2 mesa3d-px2 libdrm host-pkgconf
 DIATOM_LICENSE = MIT
 
-# Its build finds SDL2 with pkg-config, which in Buildroot's PATH answers for
-# this system's libraries. LDFLAGS=-lm from the environment, which its
-# Makefile appends to: the desktop port doesn't link libm, which macOS
-# includes anyway and Linux doesn't.
+# Diatom's Pixel 2 port (port/pixel2.c, its ADR-0035). Its build finds SDL2,
+# EGL, GLES, GBM and libdrm with pkg-config, which in Buildroot's PATH answers
+# for this system's libraries.
 define DIATOM_BUILD_CMDS
-	$(TARGET_MAKE_ENV) LDFLAGS=-lm $(MAKE) -C $(@D) PORT=desktop CC="$(TARGET_CC)"
+	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) PORT=pixel2 CC="$(TARGET_CC)"
 endef
 
 define DIATOM_INSTALL_TARGET_CMDS
-	$(INSTALL) -D -m 0755 $(@D)/build/desktop/diatom $(TARGET_DIR)/usr/bin/diatom
+	$(INSTALL) -D -m 0755 $(@D)/build/pixel2/diatom $(TARGET_DIR)/usr/bin/diatom
 endef
 
 $(eval $(generic-package))

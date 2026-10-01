@@ -1,8 +1,8 @@
 config BR2_PACKAGE_DIATOM
 	bool "diatom"
 	depends on BR2_PACKAGE_SDL2
+	depends on BR2_PACKAGE_MESA3D_PX2
 	help
 	  Diatom, the libretro frontend TortOS runs games with, built
-	  from its repository, mounted at /diatom in the build
-	  container. For now its desktop port (plain SDL2); the Pixel 2
-	  port comes later.
+	  from its repository (mounted at /diatom in the build
+	  container) with its Pixel 2 port.
