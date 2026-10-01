@@ -2,7 +2,8 @@
  * brrr: says "TortOS go brrr" on the Pixel 2's screen at boot, for fun.
  *
  * Sets a mode on the first connected connector through KMS, draws into a
- * dumb buffer, and then sleeps, since the picture goes when the buffer does.
+ * dumb buffer, lets go of the display for whatever comes next, and then
+ * sleeps, since the picture goes when the buffer does.
  * The panel is portrait (480x640) mounted on its side, so the drawing is
  * done in landscape (640x480) and turned 90 degrees counter-clockwise, the
  * same way the kernel console rotated it (fbcon rotate=3).
@@ -172,9 +173,20 @@ int main(void)
 		perror("brrr: set mode");
 		return 1;
 	}
+	double lit = since_boot();
+
+	/*
+	 * Let go of the display but keep the picture: dropping DRM master
+	 * leaves the mode and this framebuffer on screen, so whatever comes
+	 * next can take the display and replace the picture directly, with
+	 * nothing in between. Exiting would free the framebuffer and the
+	 * kernel's fbdev would put up black.
+	 */
+	drmDropMaster(fd);
+
 	char line[96];
 	snprintf(line, sizeof(line), "brrr: panel lit at %.3f s, the mode-set took %.0f ms\n",
-		 since_boot(), (since_boot() - started) * 1000);
+		 lit, (lit - started) * 1000);
 	log_to_kernel(line);
 
 	/* The picture lasts as long as the buffer, so stay */

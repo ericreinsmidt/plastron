@@ -203,6 +203,19 @@ than hoped, but it showed something useful: Rockchip's loader reads fast
 (about 10 MB/s), so most of the 0.65 s before U-Boot is Rockchip's own memory
 setup, which replacing their loader wouldn't change.
 
+### 12. Shutting down cleanly
+
+A boot suddenly took 0.4 s longer, all of it in mounting the system drive:
+it was repairing itself first, because it hadn't been closed properly at the
+last shutdown. The shutdown steps ran before the remaining programs were
+stopped, and a program still writing to the drive (the spinning cube demo,
+through the graphics driver's cache) kept it from closing. Now everything
+else is stopped first.
+
+**Every boot after a reboot or shutdown skips that 0.4 s repair.** (A power
+cut or a dead battery would still cause one, which a read-only system drive
+would rule out.)
+
 ## Graphics start-up
 
 Not boot time exactly, but the same question for TortOS: how long until it
@@ -242,8 +255,9 @@ the panel's full 60 fps. On the Brick, SDL and GL alone took about 620 ms.
 - **Replace Rockchip's closed first-stage loader** with U-Boot's own, which
   could also load the kernel directly. Less promising than it looked: step 11
   showed most of that 0.65 s is Rockchip's memory setup, which would stay.
-- **A read-only system drive.** It would mount in a few milliseconds and
-  can't be damaged by pulling the power.
+- **A read-only system drive.** It would mount in a few milliseconds, and it
+  can't be left needing repair (step 12) by pulling the power or a dead
+  battery.
 - **A shorter press to power on.** The power chip (RK817) waits about 0.7 s
   of holding before it switches on, which comes straight off the time from
   pressing power. It may be a setting in the chip.
