@@ -1,0 +1,99 @@
+From: TortOS-px2
+Subject: [PATCH] PX30: caches on from the start of board_init_f
+
+The miniloader enters U-Boot with the MMU and caches off, and everything
+before relocation ran uncached: 706 ms from board_init_f to board_init_r,
+80 ms with the caches on. Page tables for the early data cache go at
+16 MiB; the cache goes off again just before initr_caches, which then
+sets up U-Boot's own tables as usual.
+---
+--- a/common/board_f.c	2025-10-06 19:13:09.000000000 +0000
++++ b/common/board_f.c	2026-10-01 05:37:47.402304308 +0000
+@@ -45,6 +45,7 @@
+ #include <video.h>
+ #include <watchdog.h>
+ #include <asm/cache.h>
++#include <asm/system.h>
+ #include <asm/global_data.h>
+ #include <asm/io.h>
+ #include <asm/sections.h>
+@@ -889,6 +890,26 @@
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_ROCKCHIP_PX30
++/*
++ * TortOS-px2: turn the caches on as soon as board_init_f starts. The
++ * miniloader enters U-Boot with the MMU and both caches off, and everything
++ * before relocation then ran uncached: 706 ms, 80 with this. The data cache
++ * needs the MMU, so page tables go at 16 MiB, which nothing loads into
++ * before Linux. board_r turns the cache off again before initr_caches, so
++ * U-Boot sets up its own tables after relocation exactly as it always does.
++ */
++static int px2_early_caches(void)
++{
++	icache_enable();
++	gd->arch.tlb_addr = 0x01000000;
++	gd->arch.tlb_size = PGTABLE_SIZE;
++	memset((void *)gd->arch.tlb_addr, 0, gd->arch.tlb_size);
++	dcache_enable();
++	return 0;
++}
++#endif
++
+ static void initcall_run_f(void)
+ {
+ 	/*
+@@ -906,6 +927,9 @@
+ 	INITCALL(initf_upl);
+ 	INITCALL(log_init);
+ 	INITCALL(initf_bootstage); /* uses its own timer, so does not need DM */
++#ifdef CONFIG_ROCKCHIP_PX30
++	INITCALL(px2_early_caches);
++#endif
+ 	INITCALL(event_init);
+ 	INITCALL(bloblist_maybe_init);
+ 	INITCALL(setup_spl_handoff);
+--- a/common/board_r.c	2025-10-06 19:13:09.000000000 +0000
++++ b/common/board_r.c	2026-10-01 05:37:47.402488768 +0000
+@@ -26,6 +26,7 @@
+ #include <log.h>
+ #include <net.h>
+ #include <asm/cache.h>
++#include <asm/system.h>
+ #include <asm/global_data.h>
+ #include <u-boot/crc.h>
+ #include <binman.h>
+@@ -605,6 +606,22 @@
+  * TODO: perhaps reset the watchdog in the initcall function after each call?
+  */
+ 
++#ifdef CONFIG_ROCKCHIP_PX30
++/*
++ * TortOS-px2: board_f turned the data cache on early, with page tables at
++ * 16 MiB. Turn it off and forget those tables, so initr_caches sets up
++ * U-Boot's own in the space it reserved for them.
++ */
++static int px2_early_caches_off(void)
++{
++	if (get_sctlr() & CR_M) {
++		dcache_disable();
++		gd->arch.tlb_fillptr = 0;
++	}
++	return 0;
++}
++#endif
++
+ static void initcall_run_r(void)
+ {
+ 	/*
+@@ -616,6 +633,9 @@
+ 	INITCALL(event_init);
+ 	/* TODO: could x86/PPC have this also perhaps? */
+ #if CONFIG_IS_ENABLED(ARM) || CONFIG_IS_ENABLED(RISCV)
++#ifdef CONFIG_ROCKCHIP_PX30
++	INITCALL(px2_early_caches_off);
++#endif
+ 	INITCALL(initr_caches);
+ 	/* Note: For Freescale LS2 SoCs, new MMU table is created in DDR.
+ 	 *	 A temporary mapping of IFC high region is since removed,

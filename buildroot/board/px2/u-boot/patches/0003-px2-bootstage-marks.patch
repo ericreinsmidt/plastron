@@ -1,0 +1,249 @@
+From: TortOS-px2
+Subject: [PATCH] bootstage marks for timing U-Boot without serial
+
+Marks after the init steps most likely to be slow, so the record U-Boot
+leaves in the device tree (CONFIG_BOOTSTAGE_FDT) shows where its time
+goes. The tree is shrunk to its minimum before that record is written,
+which left room for only four entries, so the shrink keeps 4 KiB spare.
+Development only.
+---
+--- a/common/board_f.c	2026-10-01 05:37:47.402304308 +0000
++++ b/common/board_f.c	2026-10-01 05:37:47.404682074 +0000
+@@ -910,6 +910,60 @@
+ }
+ #endif
+ 
++
++/*
++ * TortOS-px2: bootstage marks, to time U-Boot without a serial console.
++ * In board_f only before reserve_bootstage or after reloc_bootstage: the
++ * relocated record, strings included, is sized from what exists at reserve time.
++ */
++static int px2_mark_f_dm(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:f_dm");
++	return 0;
++}
++
++static int px2_mark_f_timer(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:f_timer");
++	return 0;
++}
++
++static int px2_mark_f_serial(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:f_serial");
++	return 0;
++}
++
++static int px2_mark_f_console(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:f_console");
++	return 0;
++}
++
++static int px2_mark_f_banner(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:f_banner");
++	return 0;
++}
++
++static int px2_mark_f_dram(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:f_dram");
++	return 0;
++}
++
++static int px2_mark_f_reserve_video(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:f_reserve_video");
++	return 0;
++}
++
++static int px2_mark_f_clear_bss(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:f_clear_bss");
++	return 0;
++}
++
+ static void initcall_run_f(void)
+ {
+ 	/*
+@@ -940,6 +994,7 @@
+ 	INITCALL(arch_cpu_init);	/* basic arch cpu dependent setup */
+ 	INITCALL(mach_cpu_init);	/* SoC/machine dependent CPU setup */
+ 	INITCALL(initf_dm);
++	INITCALL(px2_mark_f_dm);
+ #if CONFIG_IS_ENABLED(BOARD_EARLY_INIT_F)
+ 	INITCALL(board_early_init_f);
+ #endif
+@@ -949,6 +1004,7 @@
+ #endif
+ #if !defined(CONFIG_M68K) || (defined(CONFIG_M68K) && !defined(CONFIG_MCFTMR))
+ 	INITCALL(timer_init);		/* initialize timer */
++	INITCALL(px2_mark_f_timer);
+ #endif
+ #if CONFIG_IS_ENABLED(BOARD_POSTCLK_INIT)
+ 	INITCALL(board_postclk_init);
+@@ -956,8 +1012,11 @@
+ 	INITCALL(env_init);		/* initialize environment */
+ 	INITCALL(init_baud_rate);	/* initialze baudrate settings */
+ 	INITCALL(serial_init);		/* serial communications setup */
++	INITCALL(px2_mark_f_serial);
+ 	INITCALL(console_init_f);	/* stage 1 init of console */
++	INITCALL(px2_mark_f_console);
+ 	INITCALL(display_options);	/* say that we are here */
++	INITCALL(px2_mark_f_banner);
+ 	INITCALL(display_text_info);	/* show debugging info if required */
+ 	INITCALL(checkcpu);
+ #if CONFIG_IS_ENABLED(SYSRESET)
+@@ -981,6 +1040,7 @@
+ #endif
+ 	INITCALL(announce_dram_init);
+ 	INITCALL(dram_init);		/* configure available RAM banks */
++	INITCALL(px2_mark_f_dram);
+ #if CONFIG_IS_ENABLED(POST)
+ 	INITCALL(post_init_f);
+ #endif
+@@ -1017,6 +1077,7 @@
+ 	INITCALL(setup_relocaddr_from_bloblist);
+ 	INITCALL(arch_reserve_mmu);
+ 	INITCALL(reserve_video);
++	INITCALL(px2_mark_f_reserve_video);
+ 	INITCALL(reserve_trace);
+ 	INITCALL(reserve_uboot);
+ 	INITCALL(reserve_malloc);
+@@ -1050,6 +1111,7 @@
+ 	INITCALL(do_elf_reloc_fixups);
+ #endif
+ 	INITCALL(clear_bss);
++	INITCALL(px2_mark_f_clear_bss);
+ 	/*
+ 	 * Deregister all cyclic functions before relocation, so that
+ 	 * gd->cyclic_list does not contain any references to pre-relocation
+--- a/common/board_r.c	2026-10-01 05:37:47.402488768 +0000
++++ b/common/board_r.c	2026-10-01 05:37:47.405001451 +0000
+@@ -622,6 +622,54 @@
+ }
+ #endif
+ 
++
++/*
++ * TortOS-px2: bootstage marks, to time U-Boot without a serial console.
++ * In board_f only before reserve_bootstage or after reloc_bootstage: the
++ * relocated record, strings included, is sized from what exists at reserve time.
++ */
++static int px2_mark_dm_devices(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:dm_devices");
++	return 0;
++}
++
++static int px2_mark_power_init(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:power_init");
++	return 0;
++}
++
++static int px2_mark_mmc(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:mmc");
++	return 0;
++}
++
++static int px2_mark_stdio_devices(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:stdio_devices");
++	return 0;
++}
++
++static int px2_mark_misc_init_r(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:misc_init_r");
++	return 0;
++}
++
++static int px2_mark_board_late_init(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:board_late_init");
++	return 0;
++}
++
++static int px2_mark_net(void)
++{
++	bootstage_mark_name(BOOTSTAGE_ID_ALLOC, "px2:net");
++	return 0;
++}
++
+ static void initcall_run_r(void)
+ {
+ 	/*
+@@ -688,6 +736,7 @@
+ 	INITCALL(arch_fsp_init_r);
+ #endif
+ 	INITCALL(initr_dm_devices);
++	INITCALL(px2_mark_dm_devices);
+ 	INITCALL(stdio_init_tables);
+ 	INITCALL(serial_initialize);
+ 	INITCALL(initr_announce);
+@@ -716,6 +765,7 @@
+ 	INITCALL(arch_early_init_r);
+ #endif
+ 	INITCALL(power_init_board);
++	INITCALL(px2_mark_power_init);
+ #if CONFIG_IS_ENABLED(MTD_NOR_FLASH)
+ 	INITCALL(initr_flash);
+ #endif
+@@ -735,6 +785,7 @@
+ #endif
+ #if CONFIG_IS_ENABLED(MMC)
+ 	INITCALL(initr_mmc);
++	INITCALL(px2_mark_mmc);
+ #endif
+ #if CONFIG_IS_ENABLED(XEN)
+ 	INITCALL(xen_init);
+@@ -760,6 +811,7 @@
+ 	INITCALL(pci_init);
+ #endif
+ 	INITCALL(stdio_add_devices);
++	INITCALL(px2_mark_stdio_devices);
+ 	INITCALL(jumptable_init);
+ #if CONFIG_IS_ENABLED(API)
+ 	INITCALL(api_init);
+@@ -776,6 +828,7 @@
+ 	/* miscellaneous platform-dependent init */
+ #if CONFIG_IS_ENABLED(MISC_INIT_R)
+ 	INITCALL(misc_init_r);
++	INITCALL(px2_mark_misc_init_r);
+ #endif
+ 	WATCHDOG_RESET();
+ #if CONFIG_IS_ENABLED(CMD_KGDB)
+@@ -790,6 +843,7 @@
+ 	/* PPC has a udelay(20) here dating from 2002. Why? */
+ #if CONFIG_IS_ENABLED(BOARD_LATE_INIT)
+ 	INITCALL(board_late_init);
++	INITCALL(px2_mark_board_late_init);
+ #endif
+ #if CONFIG_IS_ENABLED(PCI_ENDPOINT)
+ 	INITCALL(pci_ep_init);
+@@ -797,6 +851,7 @@
+ #if CONFIG_IS_ENABLED(NET) || CONFIG_IS_ENABLED(NET_LWIP)
+ 	WATCHDOG_RESET();
+ 	INITCALL(initr_net);
++	INITCALL(px2_mark_net);
+ #endif
+ #if CONFIG_IS_ENABLED(POST)
+ 	INITCALL(initr_post);
+--- a/boot/image-fdt.c	2025-10-06 19:13:09.000000000 +0000
++++ b/boot/image-fdt.c	2026-10-01 05:37:47.405055035 +0000
+@@ -693,7 +693,8 @@
+ 	if (CONFIG_IS_ENABLED(LMB) && lmb)
+ 		lmb_free(map_to_sysmem(blob), fdt_totalsize(blob), LMB_NONE);
+ 
+-	ret = fdt_shrink_to_minimum(blob, 0);
++	/* TortOS-px2: leave room for the bootstage record added after this */
++	ret = fdt_shrink_to_minimum(blob, 4096);
+ 	if (ret < 0)
+ 		goto err;
+ 	of_size = ret;

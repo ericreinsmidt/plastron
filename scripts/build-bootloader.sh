@@ -20,7 +20,7 @@ rm -rf "$SRC"
 mkdir -p "$SRC"
 tar -C "$SRC" --strip-components=1 -xzf "$tarball"
 cd "$SRC"
-for p in "$BOARD"/patches/*.patch; do patch -p1 -F0 -s < "$p"; done
+for p in "$BOARD"/patches/*.patch; do patch -p1 -F0 -s --batch < "$p"; done
 cp -R "$BOARD"/sources/. .
 
 make rk3326-handheld_defconfig
