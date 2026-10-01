@@ -1,5 +1,7 @@
-# GKD Pixel 2 (Rockchip RK3326S / PX30S), phase 1: the smallest image that
-# boots to a shell over USB.
+# GKD Pixel 2 (Rockchip RK3326S / PX30S): the base system. It boots, lights
+# the screen, plays sound, reads the buttons and powers off, and nothing about
+# it is TortOS's. TortOS goes on top: board/tortos/tortos.config, merged in by
+# scripts/build.sh.
 
 # CPU and toolchain. glibc, so prebuilt libretro cores and Diatom run as built.
 BR2_aarch64=y
@@ -11,7 +13,7 @@ BR2_KERNEL_HEADERS_6_19=y
 
 # System: busybox init, devtmpfs, no udev
 BR2_TARGET_GENERIC_HOSTNAME="px2"
-BR2_TARGET_GENERIC_ISSUE="TortOS-px2"
+BR2_TARGET_GENERIC_ISSUE="px2"
 BR2_INIT_BUSYBOX=y
 BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_DEVTMPFS=y
 # No getty: see board/px2/rootfs-overlay/etc/inittab
@@ -53,9 +55,6 @@ BR2_PACKAGE_HOST_UBOOT_TOOLS_BOOT_SCRIPT_SOURCE="$(BR2_EXTERNAL_PX2_PATH)/board/
 BR2_PACKAGE_LIBDRM=y
 BR2_PACKAGE_LIBDRM_INSTALL_TESTS=y
 
-# "TortOS go brrr" at boot, until TortOS has its own boot animation
-BR2_PACKAGE_BRRR=y
-
 # Graphics: Mesa's Panfrost for the Mali-G31 (our package, see its Config.in),
 # SDL2 drawing straight to the display with OpenGL ES, as TortOS will, and
 # kmscube to test GPU to screen. (glmark2's DRM build needs udev, which this
@@ -79,3 +78,11 @@ BR2_PACKAGE_ALSA_UTILS_APLAY=y
 BR2_PACKAGE_ALSA_UTILS_SPEAKER_TEST=y
 # BR2_PACKAGE_ALSA_UTILS_ALSACTL is not set
 # BR2_PACKAGE_ALSA_UTILS_ALSAMIXER is not set
+
+# The data partition for games and saves (rootfs-overlay/etc/init.d/
+# S10datapart): sfdisk and partx add it on the first boot, mkfs.exfat
+# formats it
+BR2_PACKAGE_UTIL_LINUX=y
+BR2_PACKAGE_UTIL_LINUX_BINARIES=y
+BR2_PACKAGE_UTIL_LINUX_PARTX=y
+BR2_PACKAGE_EXFATPROGS=y

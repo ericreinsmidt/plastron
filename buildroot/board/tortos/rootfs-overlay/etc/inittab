@@ -1,14 +1,14 @@
-# The base system's inittab, in place of Buildroot's default. TortOS's
-# (board/tortos/rootfs-overlay/etc/inittab) replaces it in the TortOS image,
-# and is this plus its splash, so keep the two in step.
+# TortOS's inittab: the base system's (board/px2/rootfs-overlay/etc/inittab)
+# with the splash first. Keep the two in step.
 #
-# The picture comes first: the cube needs only /dev, which the kernel mounts
+# The picture comes first: brrr needs only /dev, which the kernel mounts
 # itself, and everything below it would otherwise run before it. There's
 # no remount of / (the kernel mounts it read-write already, and doing it
 # again cost 90 ms), no swapon (there is no swap), and no getty on tty1
 # (with the kernel console off, nothing on screen would show it).
 
-# kmscube, to show the GPU works (remove for a dark screen)
+::sysinit:/etc/init.d/brrr start
+# kmscube takes over from brrr's picture as soon as it's up (remove to keep brrr)
 ::sysinit:/etc/init.d/cube start
 ::sysinit:/bin/mount -t proc proc /proc
 ::sysinit:/bin/mkdir -p /dev/pts /dev/shm

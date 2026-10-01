@@ -7,12 +7,16 @@ OS - so this builds one: as little as it takes to boot fast and run TortOS.
 
 ## Status
 
-Phase 1: the smallest image that boots, with a root shell over the USB cable.
+Phase 2: the hardware works on our own system (display with Panfrost, sound
+with headphone switching, all buttons, power, brightness, battery), and a
+picture is on screen about 2.2 s after reset. Next is TortOS itself; the plan
+is in [docs/tortos-plan.md](docs/tortos-plan.md).
 
 The kernel is kernel.org 7.1.2 with ROCKNIX's patches, config and device tree
-from their 20260901 release, the one checked on the device in phase 0. The
-plan is to carve that down, one patch at a time, to kernel.org plus the few
-patches this chip actually needs.
+from their 20260901 release, the one checked on the device in phase 0, with
+the config cut down to what the Pixel 2 uses. The plan is to carve the
+patches down too, one at a time, to kernel.org plus the few this chip
+actually needs.
 
 The bootloader is ROCKNIX's, with U-Boot rebuilt from source by
 `make bootloader` (`buildroot/board/px2/u-boot/`). Rockchip's DDR init,
@@ -32,7 +36,8 @@ Needs Docker. Everything else - the cross-compiler included - Buildroot
 builds from source inside the container.
 
 ```sh
-make                # out/sdcard.img
+make                # out/sdcard.img: TortOS on the base system
+make base           # out/sdcard-base.img: the base system alone
 make linux-rebuild  # just the kernel, after changing its config or patches
 make bootloader     # U-Boot -> buildroot/board/px2/bootloader/u-boot-px2.bin
 make shell          # a shell in the build container
@@ -46,8 +51,13 @@ building. `local/` is not tracked.
 
 ## On the device
 
-Write `out/sdcard.img` to a card from sector 0. With the USB cable plugged
-into a Mac, the Pixel appears as a network interface:
+Write `out/sdcard.img` to a card from sector 0. The first boot adds an exFAT
+partition over the rest of the card, for games and saves, which a Mac or PC
+can read and write (labeled TORTOS, or PIXEL2 on the base image). On the
+device it's mounted at `/mnt/SDCARD`.
+
+With the USB cable plugged into a Mac, the Pixel appears as a network
+interface:
 
 ```sh
 ssh root@fe80::70:78ff:fe32:1%en10
@@ -60,9 +70,14 @@ ssh root@fe80::70:78ff:fe32:1%en10
 
 ```
 buildroot/                  a Buildroot external tree (BR2_EXTERNAL)
-  configs/                  tortos_px2_defconfig
+  configs/px2_defconfig     the base Pixel 2 system: boots, display, sound,
+                            buttons, power, nothing TortOS-specific
+  board/tortos/             TortOS on top: tortos.config (merged into the
+                            base config) and its rootfs overlay
+  package/                  our packages (splash, Panfrost, jackswitch, ...)
   board/px2/
-    linux.config            kernel config (ROCKNIX's RK3326 config)
+    linux.config            kernel config, derived from ROCKNIX's RK3326
+                            one by scripts/kernel-config.sh
     patches/linux/          kernel patches, numbered in the order they apply
     dts/                    the Pixel 2 device tree (ROCKNIX's)
     bootloader/             the bootloader written at sector 64: ROCKNIX's,

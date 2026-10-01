@@ -216,6 +216,16 @@ else is stopped first.
 cut or a dead battery would still cause one, which a read-only system drive
 would rule out.)
 
+### 13. A partition for games (a cost, not a saving)
+
+The card now gets a third partition, exFAT, so games and saves can be copied
+on from a Mac or PC. The first boot creates it over the rest of the card and
+formats it (half a second, once). Every boot after that mounts it.
+
+**Mounting it costs 30 to 44 ms**, measured inside the boot with a timestamp
+either side. It runs after the picture is up, so the picture doesn't move,
+but TortOS will need it before it can list any games.
+
 ## Graphics start-up
 
 Not boot time exactly, but the same question for TortOS: how long until it
@@ -266,5 +276,8 @@ the panel's full 60 fps. On the Brick, SDL and GL alone took about 620 ms.
   out to be what TortOS waits for: right now the screen and the software
   finish at about the same time, and TortOS will add its own startup to the
   software side.
+- **Mount the games partition alongside the rest of startup** instead of in
+  line with it. Nothing but TortOS's game list needs it, so the 30 to 44 ms
+  could overlap with other work instead of adding to it.
 - **Fewer startup scripts.** TortOS will start directly instead of after a
   list of general-purpose services.

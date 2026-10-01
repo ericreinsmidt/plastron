@@ -1,0 +1,51 @@
+#!/bin/sh
+# The card's third partition, for games, saves and music: exFAT, so a Mac or
+# PC can read and write it. The card image only has boot and root, so on the
+# first boot this adds the partition over the rest of the card, whatever its
+# size, and formats it. Every boot after that just mounts it.
+#
+# The label comes from /etc/default/datapart (DATA_LABEL=...), if there is one.
+
+CARD=/dev/mmcblk0
+DATA=${CARD}p3
+MOUNT=/mnt/SDCARD
+DATA_LABEL=PIXEL2
+[ -r /etc/default/datapart ] && . /etc/default/datapart
+
+create() {
+	echo "datapart: first boot, adding $DATA over the rest of the card" > /dev/kmsg
+	# Right after root, on a 4 MiB boundary (the card's erase blocks). The
+	# start has to be given: left to itself, sfdisk takes the first free
+	# gap, which is the bootloader's, between sector 64 and boot at 16 MiB.
+	# Type 7 is exFAT in an MBR table; the size is the rest of the card.
+	root=/sys/block/mmcblk0/mmcblk0p2
+	start=$(( $(cat $root/start) + $(cat $root/size) ))
+	start=$(( (start + 8191) / 8192 * 8192 ))
+	echo "start=$start, type=7" | sfdisk --quiet --append --no-reread $CARD || return 1
+	# Root is mounted, so the kernel won't re-read the whole table; add the
+	# one partition instead
+	partx --add --nr 3 $CARD || return 1
+	mkfs.exfat -L "$DATA_LABEL" $DATA > /dev/null || return 1
+	echo "datapart: $DATA formatted as exFAT, label $DATA_LABEL" > /dev/kmsg
+}
+
+start() {
+	new=
+	if [ ! -b $DATA ]; then
+		create || {
+			echo "datapart: couldn't create $DATA" > /dev/kmsg
+			return 1
+		}
+		new=1
+	fi
+	mkdir -p $MOUNT
+	mount -t exfat -o noatime $DATA $MOUNT || return 1
+	# Keeps a Mac from building a Spotlight index of the whole card
+	if [ -n "$new" ]; then
+		touch $MOUNT/.metadata_never_index
+	fi
+}
+
+case "$1" in
+start) start ;;
+esac
