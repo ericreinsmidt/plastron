@@ -2,9 +2,11 @@
 # to a card at sector 0.
 IMAGE := tortos-px2-builder
 VOLUME := tortos-px2-work
+# The x86 packing step runs on the same Debian the builder starts from
+BASE_IMAGE := debian@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
 DOCKER_RUN := docker run --rm -t -v $(CURDIR):/src:ro -v $(VOLUME):/work $(IMAGE)
 
-.PHONY: all builder volume image shell linux-rebuild copy-out clean-output
+.PHONY: all builder volume image bootloader shell linux-rebuild copy-out clean-output
 
 all: image
 
@@ -19,6 +21,13 @@ volume:
 image: builder volume
 	$(DOCKER_RUN) sh /src/scripts/build.sh
 	$(MAKE) copy-out
+
+# U-Boot, packed into buildroot/board/px2/bootloader/u-boot-px2.bin. Rarely
+# needed: the result is committed, and `make` only uses it.
+bootloader: builder volume
+	$(DOCKER_RUN) sh /src/scripts/build-bootloader.sh
+	docker run --rm --platform linux/amd64 -v $(CURDIR):/src -v $(VOLUME):/work \
+		$(BASE_IMAGE) sh /src/scripts/pack-bootloader.sh
 
 # Rebuild just the kernel after changing its config, patches or device tree
 linux-rebuild: builder volume
