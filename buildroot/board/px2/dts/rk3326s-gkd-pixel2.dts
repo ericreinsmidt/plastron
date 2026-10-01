@@ -130,9 +130,8 @@
 		poll-interval = <10>;
 
 		/*
-		 * No rumble properties here - handled by the standalone
-		 * "vibrator" node below instead of this driver's own
-		 * has_rumble path (see there for why).
+		 * No rumble properties here. TortOS-px2 doesn't use rumble;
+		 * the motor is held off by a GPIO hog (see &gpio0).
 		 */
 
 		button-up {
@@ -227,26 +226,9 @@
 	};
 
 	/*
-	 * Uses the built-in pwm-vibrator driver (CONFIG_INPUT_PWM_VIBRA=y)
-	 * instead of rocknix-singleadc-joypad's own has_rumble path, which
-	 * is an out-of-tree module that doesn't probe until ~10s into boot
-	 * vs ~0.65s for pwm-vibrator. Sibling boards (rg351m/rg351v/
-	 * gameforce-chi) do the same.
-	 *
-	 * Period is 1000000ns (1kHz), not vendor's 200000000ns (5Hz): the
-	 * vendor rate produces perceptible individual pulses at partial
-	 * duty. 1kHz matches rg351m/rg351v and gives smooth vibration at
-	 * any strength. Polarity matches vendor.
-	 *
-	 * pwm-vibra.c's probe left the motor stuck on at boot the same way
-	 * rocknix-singleadc-joypad's did; 030-pwm-vibra-kick-stuck-boot-
-	 * state.patch ports the same probe-time kick fix into it.
+	 * TortOS-px2: no rumble. ROCKNIX's pwm-vibrator node is gone, and the
+	 * motor is held off by a GPIO hog on its pin instead; see &gpio0 below.
 	 */
-	vibrator: pwm-vibrator {
-		compatible = "pwm-vibrator";
-		pwms = <&pwm0 0 1000000 0>;
-		pwm-names = "enable";
-	};
 
 	rk817-sound {
 		compatible = "simple-audio-card";
@@ -814,9 +796,21 @@
 	status = "okay";
 };
 
-/* pwm0 drives the rumble motor (see comment on the joypad node above). */
-&pwm0 {
-	status = "okay";
+/*
+ * TortOS-px2: the rumble motor is on GPIO0_B7, PWM0's pin, and TortOS
+ * doesn't use it. Without a driver claiming PWM0 the motor runs from
+ * power-on: the channel comes up disabled with inverted polarity, which
+ * idles the pin high. ROCKNIX's pwm-vibrator driver stopped it with a 250 ms
+ * ramp at boot (their patch 030). Instead, PWM0 stays off and the pin is a
+ * plain GPIO held low from the moment the GPIO controller probes.
+ */
+&gpio0 {
+	rumble-off-hog {
+		gpio-hog;
+		gpios = <RK_PB7 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "rumble-off";
+	};
 };
 
 &pwm1 {
