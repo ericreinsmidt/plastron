@@ -1,0 +1,105 @@
+From: TortOS-px2
+Subject: [PATCH] drm/rockchip: first mode-set from a work item, not from bind
+
+drm_client_setup() does the first mode-set, which on the GKD Pixel 2's
+MIPI DSI panel is its whole power-on sequence, about 0.7 s of resets,
+init commands and fixed delays. From rockchip_drm_bind(), every later
+probe and the root mount waited for it. From a work item, the panel
+powers up while the rest of the boot carries on.
+
+Meant for kernels without fbcon: fbcon does the mode-set in its console
+takeover under the console lock, which held up init by 0.3 s (the kernel
+opens /dev/console just before running it). Without fbcon nothing sets
+fbdev's mode, so the work item does, with
+drm_fb_helper_restore_fbdev_mode_unlocked().
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_drv.c | 31 ++++++++++++++++++++-
+ drivers/gpu/drm/rockchip/rockchip_drm_drv.h |  4 +++
+ 2 files changed, 34 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_drv.c b/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
+index 3099408..b91c427 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
+@@ -19,6 +19,7 @@
+ 
+ #include <drm/clients/drm_client_setup.h>
+ #include <drm/drm_drv.h>
++#include <drm/drm_fb_helper.h>
+ #include <drm/drm_fbdev_dma.h>
+ #include <drm/drm_gem_dma_helper.h>
+ #include <drm/drm_of.h>
+@@ -142,6 +143,30 @@ static void rockchip_iommu_cleanup(struct drm_device *drm_dev)
+ 	iommu_domain_free(private->domain);
+ }
+ 
++/*
++ * The first mode-set powers the panel up, and on a MIPI DSI panel that is its
++ * whole power-on sequence: resets, init commands and fixed delays, the better
++ * part of a second. drm_client_setup() did it from bind, so every later probe
++ * and the root mount waited. From a work item, the panel powers up while the
++ * rest of boot carries on, and userspace finds it already on.
++ *
++ * With fbcon, the mode-set happens in its console takeover, under the console
++ * lock, which also held up init (the kernel opens /dev/console just before
++ * starting it). So this is meant for kernels without fbcon, where nothing
++ * else would set fbdev's mode: the work item sets it, with no lock but DRM's,
++ * and without force, so it never overrides userspace that got there first.
++ */
++static void rockchip_drm_client_setup_work(struct work_struct *work)
++{
++	struct rockchip_drm_private *private =
++		container_of(work, struct rockchip_drm_private, client_setup_work);
++	struct drm_device *drm_dev = private->drm_dev;
++
++	drm_client_setup(drm_dev, NULL);
++	if (drm_dev->fb_helper)
++		drm_fb_helper_restore_fbdev_mode_unlocked(drm_dev->fb_helper, false);
++}
++
+ static int rockchip_drm_bind(struct device *dev)
+ {
+ 	struct drm_device *drm_dev;
+@@ -199,7 +224,9 @@ static int rockchip_drm_bind(struct device *dev)
+ 	if (ret)
+ 		goto err_kms_helper_poll_fini;
+ 
+-	drm_client_setup(drm_dev, NULL);
++	private->drm_dev = drm_dev;
++	INIT_WORK(&private->client_setup_work, rockchip_drm_client_setup_work);
++	schedule_work(&private->client_setup_work);
+ 
+ 	return 0;
+ err_kms_helper_poll_fini:
+@@ -216,7 +243,9 @@ static int rockchip_drm_bind(struct device *dev)
+ static void rockchip_drm_unbind(struct device *dev)
+ {
+ 	struct drm_device *drm_dev = dev_get_drvdata(dev);
++	struct rockchip_drm_private *private = drm_dev->dev_private;
+ 
++	flush_work(&private->client_setup_work);
+ 	drm_dev_unregister(drm_dev);
+ 
+ 	drm_kms_helper_poll_fini(drm_dev);
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_drv.h b/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
+index 2e86ad0..4e12c0b 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
+@@ -9,6 +9,7 @@
+ #ifndef _ROCKCHIP_DRM_DRV_H
+ #define _ROCKCHIP_DRM_DRV_H
+ 
++#include <linux/workqueue.h>
+ #include <drm/drm_atomic_helper.h>
+ #include <drm/drm_gem.h>
+ 
+@@ -69,6 +70,9 @@ struct rockchip_drm_private {
+ 	struct device *iommu_dev;
+ 	struct mutex mm_lock;
+ 	struct drm_mm mm;
++	/* The first mode-set runs from here, off the bind path */
++	struct drm_device *drm_dev;
++	struct work_struct client_setup_work;
+ };
+ 
+ struct rockchip_encoder {

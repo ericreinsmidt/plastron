@@ -1,4 +1,0 @@
-#!/bin/sh
-# "TortOS go brrr" on screen, first thing at boot. It stays running: the
-# picture lasts only as long as its framebuffer does.
-[ "$1" = start ] && /usr/bin/brrr > /dev/null 2>&1 &

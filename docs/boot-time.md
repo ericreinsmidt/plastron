@@ -1,0 +1,187 @@
+# Boot time log
+
+Everything done to make the GKD Pixel 2 boot faster, in order, with what it
+measured before and after. Kept up to date as we go.
+
+## Where it stands
+
+From the moment the chip comes out of reset:
+
+| | Time |
+|---|---|
+| Kernel starts | 1.47 s |
+| **Picture on screen** ("TortOS go brrr") | **about 2.4 s** |
+| Startup scripts done | about 2.8 s |
+
+Add the power button on top: the power chip waits for the press to be held
+for a moment before it switches on, well under a second.
+
+For comparison, GKD's own system took about 16 s just from the kernel
+starting to its menu program running, and official ROCKNIX took 33 s to its
+menu.
+
+Where the 2.4 s goes now:
+
+| Step | Time | Whose |
+|---|---|---|
+| Rockchip's memory setup and first loader | 0.67 s | Rockchip's closed blobs |
+| U-Boot, the bootloader | 0.13 s | ours |
+| U-Boot reading the 15 MB kernel off the card | 0.70 s | ours |
+| Kernel, until the picture | 0.92 s | ours |
+
+## How it's measured
+
+Nothing here uses a serial console (that would mean soldering), so:
+
+- **The bootloader** writes its own timeline into the device tree it hands
+  Linux (U-Boot's "bootstage"), readable afterwards on the running device
+  under `/proc/device-tree/bootstage`. Its clock starts at reset.
+- **The kernel** stamps every log line with the time since it started
+  (`dmesg`). For a full breakdown, booting once with `initcall_debug` times
+  every driver.
+- **The picture:** `brrr` logs `brrr: panel lit at ... s` to the kernel log
+  the moment its picture is on screen.
+- **Startup scripts:** the last one writes the time to `/tmp/boot-done`.
+- **Whole reboots** are timed from the Mac: from sending `reboot` until the
+  Pixel shows up on USB again.
+- **The power button,** once, from a phone video.
+
+## What we did
+
+### 0. The starting point
+
+Our first own system booted, but slowly: about **7.5 s** from pressing power
+to the login prompt, measured from a video. About 4 s of that passed before
+the kernel even started, all in the bootloader.
+
+### 1. The bootloader stopped waiting a second
+
+U-Boot (ROCKNIX's build) waited 1 second at every boot for someone to press a
+key on the serial console, which nobody can reach on this device. We build
+our own U-Boot now, from the same source, with no wait.
+
+**Saved about 1.2 s** per boot (reboots went from 9.8 to 8.6 s).
+
+### 2. The kernel loads where it can run
+
+U-Boot loaded the kernel at an address the kernel can't run from, then copied
+all 21 MB of it somewhere else before starting it. Now it loads it in the
+right place to begin with.
+
+**Saved 229 ms** (the copy took 245 ms, now 16).
+
+### 3. The bootloader turned its caches on
+
+U-Boot ran its first steps with the CPU's caches switched off, so every bit of
+memory it touched went the slow way. Found by having U-Boot record the CPU's
+settings in its timeline: the caches were off, and the CPU speed was fine.
+Now it turns the caches on first thing.
+
+**Saved about 625 ms** (those first steps took 706 ms, now 80). The kernel
+starts 1.73 s after reset instead of 2.35.
+
+### 4. The kernel was cut down to this device
+
+ROCKNIX's kernel is built for dozens of handhelds: other chips' clock
+drivers, other screens, Wi-Fi, Bluetooth, USB gadgets of all kinds, network
+filesystems, and 306 separately loadable modules. We kept what the Pixel 2
+actually uses and dropped the rest, and nothing is a module anymore.
+
+The kernel went from **21.4 MB to 15.0 MB**, so U-Boot reads it faster
+(918 ms to 696), and it starts up faster too (2.26 s to reach the first
+program instead of 3.12).
+
+**Reset to startup done: 5.28 s to 4.36 s.** And the buttons started working
+on our system for the first time: their driver was one of ROCKNIX's modules,
+which our system never loaded, so it's now built in.
+
+### 5. The rumble motor is held off without a delay
+
+With its driver gone, the rumble motor ran from power-on. ROCKNIX's driver
+stopped it by fading it out over 250 ms during boot. Instead, the pin is held
+low from the first moment the kernel sets up its pins.
+
+**No buzz, and no 250 ms.**
+
+### 6. The kernel stopped waiting for the screen
+
+The kernel lit the panel itself during boot, to show its own text console,
+and everything else in the boot waited for the screen to finish powering up:
+1.19 s. We turned that off, along with two smaller things:
+
+- Every kernel message was also being sent out the serial port, to nobody.
+- A random number generator ran a 145 ms self-test, for features this device
+  doesn't use.
+
+**The kernel reaches its first program in 0.7 to 0.8 s instead of 2.26.
+Reset to startup done: about 2.7 s.**
+
+The screen now stays dark until a program lights it, so we added `brrr`,
+which shows "TortOS go brrr" until TortOS has its own boot animation. The
+picture appeared 2.1 s after the kernel started, since the screen's power-up
+now happened after the kernel was done.
+
+### 7. The screen's waits were 2.5 times too long
+
+The screen powers up by following a list of steps, some with a wait after
+them. The driver reads those waits as hexadecimal, but the Pixel 2's settings
+(ROCKNIX's) were written as ordinary numbers, so "wait 100" waited 256 ms,
+"wait 120" waited 288, and so on: 640 ms of waiting where 280 were meant.
+Found by logging the time of every step; the gaps matched the hexadecimal
+values exactly. We wrote the waits the way the driver reads them.
+
+`brrr` was also slow to draw its picture (a quarter of a second), because it
+drew pixel by pixel straight into the screen's memory, which is slow to write
+to. It now draws in ordinary memory and copies the result over in one go.
+
+**Lighting the screen: 1,070 ms to 688. Reset to picture: about 3.7 s to
+3.0.**
+
+### 8. The picture comes first
+
+The first program, `init`, did a few chores before starting anything,
+including remounting the system drive, which was already mounted the right
+way: 90 ms. `brrr` now starts before all of that, and the remount is gone.
+
+**Picture 1.54 s after the kernel starts, down to 1.49.**
+
+### 9. The screen powers up in the background
+
+The screen's power-up takes about 0.7 s however it's done. Rather than wait
+for it at the end, the kernel now starts it early, around 0.2 s in, and lets
+the rest of the boot carry on at the same time. By the time `brrr` runs, the
+screen is already on, and showing the picture takes 3 ms.
+
+The first try did this through the kernel's text console, which held a lock
+the whole time that the first program also needs, so the boot got 0.3 s
+slower overall. The version that stuck drops the text console and has the
+display driver power the screen up directly.
+
+**Picture 1.49 s after the kernel starts, down to 0.92. Reset to picture:
+about 2.4 s.** The first program starts a little later than before (0.76 to
+0.80 s instead of 0.70), which is still being looked into.
+
+## Tried, and didn't help
+
+- **A compressed kernel.** Half the size, so U-Boot read it in 364 ms instead
+  of 696. But unpacking it took 727 ms, because U-Boot runs the CPU at only
+  400 MHz. Worth trying again if U-Boot ever runs the CPU faster.
+- **Disabling the CPU's idle states, and the kernel's tickless mode.** Tried
+  while hunting the screen's slow waits, on the theory that sleeping CPUs
+  woke up late. Neither changed anything; the real cause was the
+  hexadecimal mix-up in step 7.
+
+## Ideas not tried yet
+
+- **Run the CPU faster in U-Boot.** It runs at 400 MHz until the kernel takes
+  over. Faster would help everything before the kernel, and could make a
+  compressed kernel pay off. Needs the CPU's voltage raised first, carefully.
+- **A smaller kernel still.** U-Boot reads it at about 35 ms per MB. Starting
+  over from an empty kernel config and adding only what the Pixel 2 uses
+  should shrink it a lot.
+- **Replace Rockchip's closed first-stage loaders** (0.67 s) with U-Boot's
+  own, which could also load the kernel directly.
+- **A read-only system drive.** It would mount in a few milliseconds and
+  can't be damaged by pulling the power.
+- **Fewer startup scripts.** TortOS will start directly instead of after a
+  list of general-purpose services.

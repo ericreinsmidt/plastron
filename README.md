@@ -21,6 +21,11 @@ timings in the device tree it hands Linux (bootstage), so where the
 bootloader spends its time can be read on the running device under
 `/proc/device-tree/bootstage`, with no serial console.
 
+## Boot time
+
+What's been done to make it boot fast, step by step and with measurements,
+is in [docs/boot-time.md](docs/boot-time.md).
+
 ## Building
 
 Needs Docker. Everything else - the cross-compiler included - Buildroot

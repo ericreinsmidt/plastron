@@ -20,7 +20,7 @@ define BRRR_INSTALL_TARGET_CMDS
 endef
 
 define BRRR_INSTALL_INIT_SYSV
-	$(INSTALL) -D -m 0755 $(BRRR_PKGDIR)/S00brrr $(TARGET_DIR)/etc/init.d/S00brrr
+	$(INSTALL) -D -m 0755 $(BRRR_PKGDIR)/brrr.init $(TARGET_DIR)/etc/init.d/brrr
 endef
 
 $(eval $(generic-package))
