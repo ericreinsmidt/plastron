@@ -282,6 +282,15 @@ as the shelf takes over. Still between TortOS starting and its first frame:
 0.10 s of `launch.sh` before TortOS itself, and a 350 ms pause TortOS takes to
 swallow stray button presses from the boot.
 
+Then `launch.sh` itself: every helper program it ran before the launcher
+(`mkdir`, `pidof`, `rm`, `cut`) is a process start, and they added up to 93 ms.
+Done with the shell's own built-ins instead, it takes 39 ms, and TortOS starts
+70 to 100 ms earlier. The shelf gained only about 30 ms on average over three
+boots, within the boot-to-boot spread: started earlier, TortOS shares the CPU
+with more of the startup scripts and its own startup runs a little longer.
+The rewrite also caught a race that started Diatom twice, which the slower
+`pidof` had mostly hidden.
+
 ## Graphics start-up
 
 Not boot time exactly, but the same question for TortOS: how long until it
