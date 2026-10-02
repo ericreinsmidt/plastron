@@ -12,7 +12,7 @@ From the moment the chip comes out of reset:
 | Kernel starts | 1.33 s |
 | **Picture on screen** (the boot animation starts) | **about 2.2 s** |
 | Startup scripts done | about 2.5 s |
-| **TortOS's shelf on screen**, ready to use | **about 3.8 s** |
+| **TortOS's shelf on screen**, ready to use | **about 3.4 s** |
 
 Add the power button on top. The power chip only switches on once the button
 has been held for a moment, about 0.7 s into the press (measured from a
@@ -22,7 +22,7 @@ is still down, not on release.
 | | Time |
 |---|---|
 | **Power button pressed to picture on screen** | **about 2.9 s** |
-| **Power button pressed to TortOS's shelf** | **about 4.5 s** |
+| **Power button pressed to TortOS's shelf** | **about 4.1 s** |
 
 For comparison, GKD's own system took about 16 s just from the kernel
 starting to its menu program running, and official ROCKNIX took 33 s to its
@@ -290,6 +290,33 @@ boots, within the boot-to-boot spread: started earlier, TortOS shares the CPU
 with more of the startup scripts and its own startup runs a little longer.
 The rewrite also caught a race that started Diatom twice, which the slower
 `pidof` had mostly hidden.
+
+### 16. No pause before the shelf, and no waiting on the emulator
+
+TortOS paused 350 ms before drawing its first frame, to throw away buttons
+pressed during the boot. The Brick needs that: its buttons come up in bursts
+while it starts. The Pixel's don't. Logging every button event across
+several boots, power-button boots included, the pause caught nothing. So the
+pause became each device's call: the Brick keeps it, and the Pixel just
+clears whatever is queued and draws.
+
+That gave back only about 150 ms, not 350. The pause had been hiding a wait:
+before its first frame TortOS says hello to Diatom, the emulator that stays
+running in the background, and Diatom didn't answer until it had loaded all
+six emulator cores, about 280 ms while the boot is busy. Diatom now loads
+them in the background and answers at once. A game picked while that is
+still going on waits, at most, for the one core being loaded.
+
+Measured from the kernel's log on 2026-10-02, four boots each:
+
+| After the kernel starts | Before | Pause gone | And Diatom answers at once |
+|---|---|---|---|
+| **TortOS's shelf on screen** | **2.45 s** | **2.30 s** (2.27 to 2.38) | **2.09 s** (2.04 to 2.11) |
+
+**About 0.36 s sooner to the shelf**, a little more than the pause itself,
+since TortOS now shares the CPU with less of Diatom's loading. The boots
+also vary less. The shelf now takes over at about frame 36 of the
+animation's 47, before it reaches the logo.
 
 ## Graphics start-up
 
