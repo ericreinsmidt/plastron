@@ -37,14 +37,6 @@ doesn't. The Pixel's answers could check for an adapter instead of always
 saying no, and the kernel would need the dongle's driver. Waiting on a dongle
 to test with.
 
-## A slight audio crackle, now and then
-
-Heard 2026-10-01 with music playing during a game (Muse over Diatom, both
-going through ALSA's mixing): an occasional slight crackle. Not yet checked
-whether it happens with music alone, or with a game alone. That's the first
-thing to find out; then whether it lines up with something busy (the
-mixer's buffer is 43 ms, sized on a guess, and both programs feed it).
-
 ## The screen's color temperature
 
 The panel may look cooler or warmer than it should. Worth a look by eye
