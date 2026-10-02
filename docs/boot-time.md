@@ -12,7 +12,7 @@ From the moment the chip comes out of reset:
 | Kernel starts | 1.33 s |
 | **Picture on screen** (the boot animation starts) | **about 2.2 s** |
 | Startup scripts done | about 2.5 s |
-| **TortOS's shelf on screen**, ready to use | **about 4.0 s** |
+| **TortOS's shelf on screen**, ready to use | **about 3.8 s** |
 
 Add the power button on top. The power chip only switches on once the button
 has been held for a moment, about 0.7 s into the press (measured from a
@@ -22,7 +22,7 @@ is still down, not on release.
 | | Time |
 |---|---|
 | **Power button pressed to picture on screen** | **about 2.9 s** |
-| **Power button pressed to TortOS's shelf** | **about 4.7 s** |
+| **Power button pressed to TortOS's shelf** | **about 4.5 s** |
 
 For comparison, GKD's own system took about 16 s just from the kernel
 starting to its menu program running, and official ROCKNIX took 33 s to its
@@ -262,6 +262,25 @@ screen over never reached it, so the shelf only appeared at the launcher's
 once-a-second backstop redraw - a second of black. TortOS now shows its first
 frame twice. And the splash, left running, came back on screen as TortOS
 exited at power-off; it now ends once TortOS has the screen.
+
+### 15. TortOS starts as soon as the card is mounted
+
+TortOS was started after all the startup scripts: seeding the random number
+generator, the system log, USB networking, SSH, the scheduler. It needs none
+of them, only `/proc`, `/tmp` and the games partition. The partition is now
+mounted straight after the basic mounts, TortOS is started right after it in
+the background, and the startup scripts carry on beside it on the other cores.
+
+| After the kernel starts | Before | After |
+|---|---|---|
+| TortOS starts | 1.23 s | 0.93 s |
+| Startup scripts done | 1.12 s | 1.30 s (sharing the cores now; nothing waits on them) |
+| **TortOS's shelf on screen** | **2.71 s** | **2.48 s** |
+
+**About 0.23 s sooner to the shelf.** The animation now reaches the logo just
+as the shelf takes over. Still between TortOS starting and its first frame:
+0.10 s of `launch.sh` before TortOS itself, and a 350 ms pause TortOS takes to
+swallow stray button presses from the boot.
 
 ## Graphics start-up
 

@@ -36,3 +36,20 @@ known to work on it. TortOS asks the device file whether it has either radio
 doesn't. The Pixel's answers could check for an adapter instead of always
 saying no, and the kernel would need the dongle's driver. Waiting on a dongle
 to test with.
+
+## A slight audio crackle, now and then
+
+Heard 2026-10-01 with music playing during a game (Muse over Diatom, both
+going through ALSA's mixing): an occasional slight crackle. Not yet checked
+whether it happens with music alone, or with a game alone. That's the first
+thing to find out; then whether it lines up with something busy (the
+mixer's buffer is 43 ms, sized on a guess, and both programs feed it).
+
+## The volume may jump between Muse and a game
+
+Noticed 2026-10-01, order not certain: Muse opened over a paused game, back to
+the game, then Muse again while the game was still paused, and the volume
+seemed to change along the way. Needs reproducing step by step first. If it
+is real, the likely place is the volume handover between TortOS and Diatom,
+which both own in turn (the level crosses the socket at each change of
+hands).

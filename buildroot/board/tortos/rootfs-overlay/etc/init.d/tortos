@@ -1,14 +1,24 @@
 #!/bin/sh
-# TortOS, from the card's games partition (mounted at /mnt/SDCARD by
-# S10datapart, which is why init runs this after rcS). TortOS's own files live
-# there, as on the Brick, so it is updated by copying files onto the card.
+# TortOS, from the card's games partition. TortOS's own files live there, as
+# on the Brick, so it is updated by copying files onto the card.
+#
+# Started by init right after datapart has mounted the card, ahead of rcS, and
+# in the background: init waits for each sysinit line, and the rest of the
+# boot has nothing TortOS needs, so it carries on beside it.
 #
 # TortOS handles the power button itself (it saves a running game first), so
 # powerkey only runs when there is no TortOS on the card to do it.
 LAUNCH=/mnt/SDCARD/TortOS/launch.sh
 
-if [ -f "$LAUNCH" ]; then
-	exec sh "$LAUNCH"
-fi
-echo "tortos: no $LAUNCH; the splash stays and power works" > /dev/kmsg
-exec /usr/sbin/powerkey
+start() {
+	if [ -f "$LAUNCH" ]; then
+		sh "$LAUNCH" < /dev/null > /dev/null 2>&1 &
+	else
+		echo "tortos: no $LAUNCH; the splash stays and power works" > /dev/kmsg
+		/usr/sbin/powerkey < /dev/null > /dev/null 2>&1 &
+	fi
+}
+
+case "$1" in
+start) start ;;
+esac

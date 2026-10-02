@@ -4,6 +4,10 @@
 # first boot this adds the partition over the rest of the card, whatever its
 # size, and formats it. Every boot after that just mounts it.
 #
+# Run by init straight after the basic mounts (see /etc/inittab), not by rcS
+# with the other startup scripts: TortOS needs this and nothing else from
+# them, and starts the moment it is done.
+#
 # The label comes from /etc/default/datapart (DATA_LABEL=...), if there is one.
 
 CARD=/dev/mmcblk0
