@@ -6,7 +6,7 @@
 #
 # Run by init straight after the basic mounts (see /etc/inittab), not by rcS
 # with the other startup scripts: TortOS needs this and nothing else from
-# them, and starts the moment it is done.
+# them, and starts the moment it is done. `stop` unmounts it at shutdown.
 #
 # The label comes from /etc/default/datapart (DATA_LABEL=...), if there is one.
 
@@ -33,6 +33,22 @@ create() {
 	echo "datapart: $DATA formatted as exFAT, label $DATA_LABEL" > /dev/kmsg
 }
 
+# A partition that was not unmounted cleanly (a flat battery, a pulled cable)
+# is checked and repaired before it is mounted. Linux will not do it, and will
+# not forget it either: a volume that is dirty when mounted stays dirty for
+# good, however cleanly it is unmounted after (fs/exfat keeps the flag as
+# persistent), so one bad power-off had every later boot warning that the
+# card needed fsck - seen 2026-10-02 after shutdowns that unmounted fine. The
+# flag is bit 1 of VolumeFlags, byte 106 of the boot sector: one od, so a
+# clean boot pays for reading one byte.
+repair() {
+	flags=$(od -An -tu1 -j106 -N1 $DATA)
+	[ $(( flags & 2 )) -eq 0 ] && return
+	echo "datapart: $DATA was not unmounted cleanly; checking it" > /dev/kmsg
+	fsck.exfat -p $DATA > /dev/null 2>&1
+	echo "datapart: fsck.exfat finished with status $?" > /dev/kmsg
+}
+
 start() {
 	new=
 	if [ ! -b $DATA ]; then
@@ -41,6 +57,8 @@ start() {
 			return 1
 		}
 		new=1
+	else
+		repair
 	fi
 	mkdir -p $MOUNT
 	mount -t exfat -o noatime $DATA $MOUNT || return 1
@@ -50,6 +68,27 @@ start() {
 	fi
 }
 
+# At shutdown, after init's SIGTERM, as soon as nothing is using it. The
+# programs that run from the card take a moment to go: Diatom took 280 ms,
+# measured 2026-10-02, and the 200 ms init waited before its umount -a was
+# too short every time - the umount failed, the read-only remount it falls
+# back to leaves an exFAT volume dirty, and the next boot had to repair it.
+# Tried every 50 ms, so it waits only as long as they need, up to 3 s; past
+# that it is left to the repair at the next boot.
+stop() {
+	grep -q " $MOUNT " /proc/mounts || return 0
+	n=0
+	until umount $MOUNT 2>/dev/null; do
+		n=$((n + 1))
+		if [ $n -ge 60 ]; then
+			echo "datapart: $MOUNT still in use after 3 s, left for the next boot to check" > /dev/kmsg
+			return 1
+		fi
+		usleep 50000
+	done
+}
+
 case "$1" in
 start) start ;;
+stop) stop ;;
 esac
