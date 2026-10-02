@@ -45,11 +45,8 @@ whether it happens with music alone, or with a game alone. That's the first
 thing to find out; then whether it lines up with something busy (the
 mixer's buffer is 43 ms, sized on a guess, and both programs feed it).
 
-## The volume may jump between Muse and a game
+## The screen's color temperature
 
-Noticed 2026-10-01, order not certain: Muse opened over a paused game, back to
-the game, then Muse again while the game was still paused, and the volume
-seemed to change along the way. Needs reproducing step by step first. If it
-is real, the likely place is the volume handover between TortOS and Diatom,
-which both own in turn (the level crosses the socket at each change of
-hands).
+The panel may look cooler or warmer than it should. Worth a look by eye
+against the Brick, and if it is off, whether the display controller can
+correct it (a color matrix or gamma table) at no cost per frame.
