@@ -12,7 +12,7 @@ SPLASH_DEPENDENCIES = libdrm host-pkgconf
 define SPLASH_BUILD_CMDS
 	$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) -Wall -Wextra \
 		-o $(@D)/splash $(@D)/splash.c \
-		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs libdrm)
+		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs libdrm) -lm
 endef
 
 # frames.bin is TortOS's boot animation, turned for the panel and encoded on

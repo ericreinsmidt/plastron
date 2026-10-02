@@ -1,0 +1,44 @@
+From: TortOS-px2
+Subject: [PATCH] drm/rockchip: vop: gamma LUT on the PX30
+
+The PX30's VOPs have a 256-entry gamma LUT, as the RK3506's VOP does:
+enabled by bit 5 of DSP_CTRL2 and mapped at VOP + 0xa00 (Rockchip's
+kernel has dsp_lut_en there and gives the LUT its own register range).
+With dsp_lut_en and lut_size the driver exposes GAMMA_LUT as it does for
+the RK3288, which also has no update_gamma_lut bit, and loads the table
+with the LUT off. The device tree gives the LUT range as the VOP's
+second reg entry.
+
+On the GKD Pixel 2 the panel shows red and green too strong in the low
+and middle range, and the table corrects it. Checked on the device by
+writing the LUT through /dev/mem first.
+---
+ drivers/gpu/drm/rockchip/rockchip_vop_reg.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_vop_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop_reg.c
+--- a/drivers/gpu/drm/rockchip/rockchip_vop_reg.c
++++ b/drivers/gpu/drm/rockchip/rockchip_vop_reg.c
+@@ -274,6 +274,7 @@
+ 	.dither_down_en = VOP_REG(PX30_DSP_CTRL2, 0x1, 8),
+ 	.dither_down_sel = VOP_REG(PX30_DSP_CTRL2, 0x1, 7),
+ 	.dither_down_mode = VOP_REG(PX30_DSP_CTRL2, 0x1, 6),
++	.dsp_lut_en = VOP_REG(PX30_DSP_CTRL2, 0x1, 5),
+ 	.cfg_done = VOP_REG_SYNC(PX30_REG_CFG_DONE, 0x1, 0),
+ };
+
+@@ -373,6 +374,7 @@
+ 	.output = &px30_output,
+ 	.win = px30_vop_big_win_data,
+ 	.win_size = ARRAY_SIZE(px30_vop_big_win_data),
++	.lut_size = 256,
+ 	.max_output = { 1920, 1080 },
+ };
+
+@@ -390,6 +392,7 @@
+ 	.output = &px30_output,
+ 	.win = px30_vop_lit_win_data,
+ 	.win_size = ARRAY_SIZE(px30_vop_lit_win_data),
++	.lut_size = 256,
+ 	.max_output = { 1920, 1080 },
+ };

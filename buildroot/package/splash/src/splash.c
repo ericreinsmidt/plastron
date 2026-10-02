@@ -18,6 +18,7 @@
  */
 #include <errno.h>
 #include <fcntl.h>
+#include <math.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -127,6 +128,51 @@ static int buffer_create(int fd, const drmModeModeInfo *mode, struct buffer *b,
 	return 0;
 }
 
+/*
+ * The panel's color correction, in the display controller's gamma table.
+ *
+ * The Pixel 2's panel shows red and green too strong in the low and middle
+ * range: beside the Brick, red came out orange, grass yellow and blue water
+ * cyan. The panel's own init sequence is GKD's, byte for byte, so this is the
+ * panel itself, and others had noticed it on the stock system too. Set by eye
+ * against the Brick on 2026-10-02, curves A/B'd on the device: out = in ^ e
+ * per channel, with red and green at 1.5 and blue left alone. Harder cuts
+ * dulled the greens; more saturation (the controller's BCSH block) made it
+ * worse.
+ *
+ * Loaded just after the first frame is lit. Loading the table means turning it
+ * off and waiting for the hardware to say so at the next refresh, a frame's
+ * wait: before the first mode-set it lit the panel 17 ms later on every boot
+ * measured. After it, the wait falls inside the gap before the animation's
+ * second frame, and only the first frame, mostly background, goes uncorrected.
+ * Later mode-sets keep the table, so TortOS and Diatom never touch it. A
+ * kernel without the table (no gamma size) leaves the colors as the panel has
+ * them.
+ */
+#define GAMMA_RED   1.5
+#define GAMMA_GREEN 1.5
+#define GAMMA_BLUE  1.0
+
+static void gamma_set(int fd, uint32_t crtc)
+{
+	drmModeCrtc *c = drmModeGetCrtc(fd, crtc);
+	int size = c ? c->gamma_size : 0;
+
+	drmModeFreeCrtc(c);
+	if (size < 2 || size > 4096) return;
+
+	uint16_t red[size], green[size], blue[size];
+	for (int i = 0; i < size; i++) {
+		double x = (double)i / (size - 1);
+
+		red[i]   = 65535 * pow(x, GAMMA_RED) + 0.5;
+		green[i] = 65535 * pow(x, GAMMA_GREEN) + 0.5;
+		blue[i]  = 65535 * pow(x, GAMMA_BLUE) + 0.5;
+	}
+	if (drmModeCrtcSetGamma(fd, crtc, size, red, green, blue))
+		perror("splash: gamma");
+}
+
 static void flip_done(int fd, unsigned seq, unsigned sec, unsigned usec, void *data)
 {
 	(void)fd; (void)seq; (void)sec; (void)usec;
@@ -198,6 +244,9 @@ int main(void)
 	snprintf(line, sizeof(line), "splash: panel lit at %.3f s, the mode-set took %.0f ms\n",
 		 lit, (lit - started) * 1000);
 	log_to_kernel(line);
+
+	/* After the first frame, not before: see gamma_set */
+	gamma_set(fd, crtc);
 
 	/* The rest of the frames at the video's rate, each on its own deadline
 	 * from the first, so a late frame does not push every later one back. */

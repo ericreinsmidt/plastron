@@ -14,8 +14,8 @@ Much further down the line, once TortOS runs on the Pixel.
 
 ## Offer our kernel fixes upstream
 
-Two things found while speeding up the boot would help everyone running a
-Pixel 2, not just us:
+Three things found on the way would help everyone running a Pixel 2, not
+just us:
 
 - **The screen's waits.** ROCKNIX's Pixel 2 device tree writes the panel's
   power-up waits as ordinary numbers, but the driver reads them as
@@ -25,6 +25,12 @@ Pixel 2, not just us:
   display driver power the screen up while the rest of the boot carries on,
   instead of everything waiting for it (boot-time.md, step 9). This one is a
   bigger ask: it would go to ROCKNIX first, and maybe to mainline after.
+- **The PX30's gamma table.** Our kernel patch 7 lets mainline use the
+  display controller's gamma table on the PX30 (three lines, after the
+  RK3506's), and the splash loads a correction for the Pixel 2's panel, whose
+  red and green come out too strong (others had noticed the colors on the
+  stock system too). The patch could go to mainline; the curve, red and green
+  at 1.5, could go to ROCKNIX for whatever loads it there.
 
 ROCKNIX takes changes as pull requests on GitHub.
 
@@ -36,9 +42,3 @@ known to work on it. TortOS asks the device file whether it has either radio
 doesn't. The Pixel's answers could check for an adapter instead of always
 saying no, and the kernel would need the dongle's driver. Waiting on a dongle
 to test with.
-
-## The screen's color temperature
-
-The panel may look cooler or warmer than it should. Worth a look by eye
-against the Brick, and if it is off, whether the display controller can
-correct it (a color matrix or gamma table) at no cost per frame.

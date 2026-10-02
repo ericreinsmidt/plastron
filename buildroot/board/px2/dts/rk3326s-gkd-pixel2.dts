@@ -899,6 +899,14 @@
 };
 
 &vopb {
+	/*
+	 * TortOS-px2: the gamma LUT as the second range (kernel patch 7), so
+	 * the registers end before it; the highest the driver uses is 0x1fc.
+	 * Rockchip's own px30 tree splits it the same way. The splash loads
+	 * the panel's correction into it at boot.
+	 */
+	reg = <0x0 0xff460000 0x0 0x260>, <0x0 0xff460a00 0x0 0x400>;
+	reg-names = "regs", "gamma_lut";
 	status = "okay";
 };
 
