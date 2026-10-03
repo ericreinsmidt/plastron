@@ -6,9 +6,10 @@ VOLUME := tortos-px2-work
 # The x86 packing step runs on the same Debian the builder starts from
 BASE_IMAGE := debian@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
 # TortOS and Diatom are built from their own repositories, mounted read-only.
-# The port work is on each one's gkd-pixel-2 branch, in these worktrees.
+# TortOS's Pixel 2 files are on its gkd-pixel-2 branch, in this worktree;
+# Diatom's Pixel 2 port is on its main, so it builds from the main checkout.
 TORTOS_SRC ?= $(HOME)/Developer/TortOS/.claude/worktrees/tortos-gkd-pixel2-port-be626c
-DIATOM_SRC ?= $(HOME)/Developer/diatom/.claude/worktrees/gkd-pixel-2
+DIATOM_SRC ?= $(HOME)/Developer/diatom
 SOURCES := -v $(TORTOS_SRC):/tortos:ro -v $(DIATOM_SRC):/diatom:ro
 DOCKER_RUN := docker run --rm -t -v $(CURDIR):/src:ro $(SOURCES) -v $(VOLUME):/work $(IMAGE)
 
