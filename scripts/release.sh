@@ -31,6 +31,15 @@ UBOOT=$OUTPUT/legal-info/sources/u-boot-$UBOOT_VERSION
 mkdir -p "$UBOOT"
 cp "/work/dl/u-boot-$UBOOT_VERSION.tar.gz" "$UBOOT/"
 cp -R /src/buildroot/board/px2/u-boot/. "$UBOOT/plastron/"
+# Copied from a working tree on a Mac, so Finder's files come too
+find "$UBOOT/plastron" -name .DS_Store -delete
+
+# Buildroot itself is GPL-2.0+, and its makefiles and patches built every
+# package in the image, but legal-info never saves it (it says so on every
+# run). The release tarball the build started from goes in.
+BUILDROOT_VERSION=$(sed -n 's/^BUILDROOT_VERSION=//p' /src/scripts/build.sh)
+mkdir -p "$OUTPUT/legal-info/buildroot-source"
+cp "/work/dl/buildroot-$BUILDROOT_VERSION.tar.xz" "$OUTPUT/legal-info/buildroot-source/"
 
 rm -rf "$RELEASE"
 mkdir -p "$RELEASE"
