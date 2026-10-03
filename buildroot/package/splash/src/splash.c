@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /*
  * splash: TortOS's boot animation on the Pixel 2, from the moment the panel
  * lights until TortOS is ready.

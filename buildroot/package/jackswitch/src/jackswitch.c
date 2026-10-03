@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /*
  * jackswitch: sound follows the headphone jack.
  *
