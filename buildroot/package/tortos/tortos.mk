@@ -10,6 +10,7 @@ TORTOS_SITE_METHOD = local
 # diatom too: its binary goes on the card with TortOS's (see the install)
 TORTOS_DEPENDENCIES = sdl2 sdl2_image sdl2_ttf ffmpeg diatom
 TORTOS_LICENSE = MIT
+TORTOS_LICENSE_FILES = LICENSE THIRD-PARTY-LICENSES.md
 # Its source is public (github.com/ericreinsmidt/TortOS), so legal-info names
 # it rather than packing up the copy below, which is a working tree's
 TORTOS_REDISTRIBUTE = NO
@@ -36,13 +37,18 @@ TORTOS_BUILD_DIR = build-pixel2
 # The ScreenScraper pair comes from the file the Makefile mounts, read here
 # in the shell so neither value is written into a command line make prints.
 TORTOS_SS_ENV = /tortos-ss.env
+#
+# The version is TortOS's own, from its Makefile, which hands it to
+# mk/cross.mk on the Brick: cross.mk alone says 0.0, and the Pixel's About
+# page did until 2026-10-03.
+TORTOS_VERSION_NUMBER = $$(sed -n 's/^VERSION ?= //p' $(@D)/Makefile)
 define TORTOS_BUILD_CMDS
 	SS_DEVID="$$(sed -n 's/^SS_DEVID=//p' $(TORTOS_SS_ENV) 2>/dev/null | head -1)" \
 	SS_DEVPASS="$$(sed -n 's/^SS_DEVPASS=//p' $(TORTOS_SS_ENV) 2>/dev/null | head -1)" \
 		$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) -f mk/cross.mk BUILD=$(TORTOS_BUILD_DIR) creds
 	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) -f mk/cross.mk \
 		CC="$(TARGET_CC)" SYSROOT="$(STAGING_DIR)" DEVICE=pixel2 \
-		BUILD=$(TORTOS_BUILD_DIR) \
+		BUILD=$(TORTOS_BUILD_DIR) VERSION="$(TORTOS_VERSION_NUMBER)" \
 		$(TORTOS_BUILD_DIR)/tortos.elf $(TORTOS_BUILD_DIR)/muse
 endef
 

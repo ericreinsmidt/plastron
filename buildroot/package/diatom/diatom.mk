@@ -9,6 +9,7 @@ DIATOM_SITE = /diatom
 DIATOM_SITE_METHOD = local
 DIATOM_DEPENDENCIES = sdl2 mesa3d-px2 libdrm host-pkgconf
 DIATOM_LICENSE = MIT
+DIATOM_LICENSE_FILES = LICENSE
 # Its source is public (github.com/ericreinsmidt/diatom), so legal-info names
 # it rather than packing up the copy below, which is a working tree's
 DIATOM_REDISTRIBUTE = NO
