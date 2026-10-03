@@ -6,11 +6,43 @@
 # in the background: init waits for each sysinit line, and the rest of the
 # boot has nothing TortOS needs, so it carries on beside it.
 #
+# A card with no TortOS on it gets the copy this image carries first: on the
+# first boot of a freshly written card, and again whenever TortOS goes
+# missing from it (the partition wiped from a Mac, an update gone wrong).
+#
 # TortOS handles the power button itself (it saves a running game first), so
 # powerkey only runs when there is no TortOS on the card to do it.
-LAUNCH=/mnt/SDCARD/TortOS/launch.sh
+CARD=/mnt/SDCARD
+LAUNCH=$CARD/TortOS/launch.sh
+SEED=/usr/share/tortos/card
+
+# Only ever adds: TortOS keeps its own state in TortOS/ (where it was, what
+# was playing), and the Roms, Bios and Saves folders may already hold the
+# player's files, so nothing on the card is removed, and nothing is replaced
+# but TortOS's own files. launch.sh goes last, after a sync, so a copy cut
+# short leaves no launch.sh and the next boot starts it over.
+seed() {
+	echo "tortos: no TortOS on the card; copying it from the image" > /dev/kmsg
+	mkdir -p "$CARD/TortOS" || return 1
+	for f in "$SEED/TortOS/"* "$SEED/TortOS/".[!.]*; do
+		[ -e "$f" ] || continue
+		[ "${f##*/}" = launch.sh ] && continue
+		cp -R "$f" "$CARD/TortOS/" || return 1
+	done
+	for d in "$SEED/"*; do
+		[ "${d##*/}" = TortOS ] && continue
+		cp -R "$d" "$CARD/" || return 1
+	done
+	sync
+	cp "$SEED/TortOS/launch.sh" "$LAUNCH" || return 1
+	sync
+	echo "tortos: TortOS copied onto the card" > /dev/kmsg
+}
 
 start() {
+	if [ ! -f "$LAUNCH" ] && [ -f "$SEED/TortOS/launch.sh" ]; then
+		seed || echo "tortos: couldn't copy TortOS onto the card" > /dev/kmsg
+	fi
 	if [ -f "$LAUNCH" ]; then
 		sh "$LAUNCH" < /dev/null > /dev/null 2>&1 &
 	else

@@ -10,10 +10,20 @@ BASE_IMAGE := debian@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687
 # Diatom's Pixel 2 port is on its main, so it builds from the main checkout.
 TORTOS_SRC ?= $(HOME)/Developer/TortOS/.claude/worktrees/tortos-gkd-pixel2-port-be626c
 DIATOM_SRC ?= $(HOME)/Developer/diatom
-SOURCES := -v $(TORTOS_SRC):/tortos:ro -v $(DIATOM_SRC):/diatom:ro
+# The libretro cores TortOS ships, which its mk/fetch-vendor.sh downloads,
+# hash-pinned, into the main checkout's vendor/ (ignored by git, so a worktree
+# has none of its own)
+TORTOS_VENDOR ?= $(HOME)/Developer/TortOS/vendor
+# TortOS's ScreenScraper developer pair, compiled into the launcher as on the
+# Brick (read by the tortos package). Ignored by git and kept out of the
+# source copy the build makes, so it is mounted on its own; without it the
+# pair comes out empty and the build carries on.
+TORTOS_SS_ENV ?= $(HOME)/Developer/TortOS/.screenscraper.env
+SOURCES := -v $(TORTOS_SRC):/tortos:ro -v $(DIATOM_SRC):/diatom:ro -v $(TORTOS_VENDOR):/tortos-vendor:ro \
+	$(if $(wildcard $(TORTOS_SS_ENV)),-v $(TORTOS_SS_ENV):/tortos-ss.env:ro)
 DOCKER_RUN := docker run --rm -t -v $(CURDIR):/src:ro $(SOURCES) -v $(VOLUME):/work $(IMAGE)
 
-.PHONY: all builder volume image base bootloader shell linux-rebuild copy-out clean-output
+.PHONY: all builder volume image base bootloader shell linux-rebuild copy-out clean-output release
 
 all: image
 
@@ -44,6 +54,19 @@ bootloader: builder volume
 linux-rebuild: builder volume
 	$(DOCKER_RUN) sh /src/scripts/build.sh linux-dirclean all
 	$(MAKE) copy-out
+
+# What a release carries, in out/release (scripts/release.sh): the image
+# without the developer's SSH key, compressed, and the licenses and sources of
+# everything in it. The version is TortOS's, from its Makefile.
+VERSION ?= $(shell sed -n 's/^VERSION ?= //p' $(TORTOS_SRC)/Makefile)
+release: builder volume
+	@[ -n "$(VERSION)" ] || { echo "no VERSION in $(TORTOS_SRC)/Makefile" >&2; exit 1; }
+	$(DOCKER_RUN) sh /src/scripts/release.sh $(VERSION)
+	rm -rf out/release
+	mkdir -p out/release
+	docker run --rm -v $(VOLUME):/work -v $(CURDIR)/out:/out --user root $(IMAGE) \
+		sh -c 'cp /work/release/* /out/release/ && chown -R $(shell id -u):$(shell id -g) /out/release'
+	@ls -l out/release
 
 OUTPUT ?= output
 CARD ?= sdcard.img
