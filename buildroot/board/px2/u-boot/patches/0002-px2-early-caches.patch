@@ -1,4 +1,4 @@
-From: TortOS-px2
+From: plastron
 Subject: [PATCH] PX30: caches on from the start of board_init_f
 
 The miniloader enters U-Boot with the MMU and caches off, and everything
@@ -23,7 +23,7 @@ sets up U-Boot's own tables as usual.
  
 +#ifdef CONFIG_ROCKCHIP_PX30
 +/*
-+ * TortOS-px2: turn the caches on as soon as board_init_f starts. The
++ * plastron: turn the caches on as soon as board_init_f starts. The
 + * miniloader enters U-Boot with the MMU and both caches off, and everything
 + * before relocation then ran uncached: 706 ms, 80 with this. The data cache
 + * needs the MMU, so page tables go at 16 MiB, which nothing loads into
@@ -70,7 +70,7 @@ sets up U-Boot's own tables as usual.
  
 +#ifdef CONFIG_ROCKCHIP_PX30
 +/*
-+ * TortOS-px2: board_f turned the data cache on early, with page tables at
++ * plastron: board_f turned the data cache on early, with page tables at
 + * 16 MiB. Turn it off and forget those tables, so initr_caches sets up
 + * U-Boot's own in the space it reserved for them.
 + */

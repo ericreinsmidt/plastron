@@ -130,7 +130,7 @@
 		poll-interval = <10>;
 
 		/*
-		 * No rumble properties here. TortOS-px2 doesn't use rumble;
+		 * No rumble properties here. plastron doesn't use rumble;
 		 * the motor is held off by a GPIO hog (see &gpio0).
 		 */
 
@@ -226,7 +226,7 @@
 	};
 
 	/*
-	 * TortOS-px2: no rumble. ROCKNIX's pwm-vibrator node is gone, and the
+	 * plastron: no rumble. ROCKNIX's pwm-vibrator node is gone, and the
 	 * motor is held off by a GPIO hog on its pin instead; see &gpio0 below.
 	 */
 
@@ -495,7 +495,7 @@
 		 * freeze/idle screen-corruption-on-wake bug.
 		 */
 		/*
-		 * TortOS-px2: the generic-dsi driver reads wait= in hex
+		 * plastron: the generic-dsi driver reads wait= in hex
 		 * (simple_strtoul(val, NULL, 16)), and ROCKNIX's port wrote them
 		 * as decimal milliseconds, so 100, 120, 10 and 50 slept 256, 288,
 		 * 16 and 80 ms: 640 ms where 280 were meant, measured on the
@@ -805,7 +805,7 @@
 };
 
 /*
- * TortOS-px2: the rumble motor is on GPIO0_B7, PWM0's pin, and TortOS
+ * plastron: the rumble motor is on GPIO0_B7, PWM0's pin, and TortOS
  * doesn't use it. Without a driver claiming PWM0 the motor runs from
  * power-on: the channel comes up disabled with inverted polarity, which
  * idles the pin high. ROCKNIX's pwm-vibrator driver stopped it with a 250 ms
@@ -900,7 +900,7 @@
 
 &vopb {
 	/*
-	 * TortOS-px2: the gamma LUT as the second range (kernel patch 7), so
+	 * plastron: the gamma LUT as the second range (kernel patch 7), so
 	 * the registers end before it; the highest the driver uses is 0x1fc.
 	 * Rockchip's own px30 tree splits it the same way. The splash loads
 	 * the panel's correction into it at boot.

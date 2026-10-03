@@ -1,4 +1,4 @@
-From: TortOS-px2
+From: plastron
 Subject: [PATCH] bootstage marks for timing U-Boot without serial
 
 Marks after the init steps most likely to be slow, so the record U-Boot
@@ -15,7 +15,7 @@ Development only.
  
 +
 +/*
-+ * TortOS-px2: bootstage marks, to time U-Boot without a serial console.
++ * plastron: bootstage marks, to time U-Boot without a serial console.
 + * In board_f only before reserve_bootstage or after reloc_bootstage: the
 + * relocated record, strings included, is sized from what exists at reserve time.
 + */
@@ -130,7 +130,7 @@ Development only.
  
 +
 +/*
-+ * TortOS-px2: bootstage marks, to time U-Boot without a serial console.
++ * plastron: bootstage marks, to time U-Boot without a serial console.
 + * In board_f only before reserve_bootstage or after reloc_bootstage: the
 + * relocated record, strings included, is sized from what exists at reserve time.
 + */
@@ -242,7 +242,7 @@ Development only.
  		lmb_free(map_to_sysmem(blob), fdt_totalsize(blob), LMB_NONE);
  
 -	ret = fdt_shrink_to_minimum(blob, 0);
-+	/* TortOS-px2: leave room for the bootstage record added after this */
++	/* plastron: leave room for the bootstage record added after this */
 +	ret = fdt_shrink_to_minimum(blob, 4096);
  	if (ret < 0)
  		goto err;

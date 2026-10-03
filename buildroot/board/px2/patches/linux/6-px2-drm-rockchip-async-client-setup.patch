@@ -1,4 +1,4 @@
-From: TortOS-px2
+From: plastron
 Subject: [PATCH] drm/rockchip: first mode-set from a work item, not from bind
 
 drm_client_setup() does the first mode-set, which on the GKD Pixel 2's

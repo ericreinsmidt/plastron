@@ -1,4 +1,4 @@
-From: TortOS-px2
+From: plastron
 Subject: [PATCH] drm/rockchip: vop: gamma LUT on the PX30
 
 The PX30's VOPs have a 256-entry gamma LUT, as the RK3506's VOP does:
