@@ -1,6 +1,5 @@
 source "$BR2_EXTERNAL_PX2_PATH/package/splash/Config.in"
 source "$BR2_EXTERNAL_PX2_PATH/package/mesa3d-px2/Config.in"
-source "$BR2_EXTERNAL_PX2_PATH/package/sdltest/Config.in"
 source "$BR2_EXTERNAL_PX2_PATH/package/powerkey/Config.in"
 source "$BR2_EXTERNAL_PX2_PATH/package/jackswitch/Config.in"
 source "$BR2_EXTERNAL_PX2_PATH/package/tortos/Config.in"

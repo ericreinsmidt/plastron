@@ -1,2 +1,2 @@
-# The data partition's label, as a Mac or PC shows it (see S10datapart)
+# The data partition's label, as a Mac or PC shows it (see /etc/init.d/datapart)
 DATA_LABEL=TORTOS

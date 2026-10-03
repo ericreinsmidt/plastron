@@ -1,6 +1,6 @@
 # TortOS's inittab: the base system's (board/px2/rootfs-overlay/etc/inittab)
-# with the splash first and TortOS in place of the cube and powerkey. Keep
-# the two in step.
+# with the splash first and TortOS in place of powerkey. Keep the two in
+# step.
 #
 # The picture comes first: the splash needs only /dev, which the kernel mounts
 # itself, and everything below it would otherwise run before it. There's

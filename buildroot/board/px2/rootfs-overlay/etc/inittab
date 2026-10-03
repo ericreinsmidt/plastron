@@ -2,14 +2,10 @@
 # (board/tortos/rootfs-overlay/etc/inittab) replaces it in the TortOS image,
 # and is this plus its splash, so keep the two in step.
 #
-# The picture comes first: the cube needs only /dev, which the kernel mounts
-# itself, and everything below it would otherwise run before it. There's
-# no remount of / (the kernel mounts it read-write already, and doing it
-# again cost 90 ms), no swapon (there is no swap), and no getty on tty1
+# There's no remount of / (the kernel mounts it read-write already, and doing
+# it again cost 90 ms), no swapon (there is no swap), and no getty on tty1
 # (with the kernel console off, nothing on screen would show it).
 
-# kmscube, to show the GPU works (remove for a dark screen)
-::sysinit:/etc/init.d/cube start
 ::sysinit:/bin/mount -t proc proc /proc
 ::sysinit:/bin/mkdir -p /dev/pts /dev/shm
 ::sysinit:/bin/mount -a
@@ -28,8 +24,8 @@ null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 ::respawn:/usr/sbin/jackswitch
 
 # Busybox runs these before it kills the remaining processes, so stop them
-# here first: anything still holding a file open for writing (kmscube, via
-# Mesa's shader cache) made the read-only remount fail, and every next boot
+# here first: anything still holding a file open for writing (a program
+# using Mesa's shader cache) made the read-only remount fail, and every next boot
 # then replayed the ext4 journal, 400 ms of mounting root. The card's
 # partition is unmounted on its own, waiting for whatever uses it to go (see
 # datapart).

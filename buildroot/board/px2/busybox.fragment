@@ -1,0 +1,8 @@
+# Changes to Buildroot's BusyBox config (package/busybox/busybox.config).
+#
+# No system logger, kernel logger or cron: TortOS logs to the card, the
+# kernel's log is in dmesg, and nothing is scheduled. Each was a process
+# started during boot, beside TortOS, for nothing.
+# CONFIG_SYSLOGD is not set
+# CONFIG_KLOGD is not set
+# CONFIG_CROND is not set
