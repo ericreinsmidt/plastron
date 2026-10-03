@@ -12,7 +12,7 @@ From the moment the chip comes out of reset:
 | Kernel starts | 1.33 s |
 | **Picture on screen** (the boot animation starts) | **about 2.2 s** |
 | Startup scripts done | about 2.5 s |
-| **TortOS's shelf on screen**, ready to use | **about 3.4 s** |
+| **TortOS's shelf on screen**, ready to use | **about 2.9 s** |
 
 Add the power button on top. The power chip only switches on once the button
 has been held for a moment, about 0.7 s into the press (measured from a
@@ -22,7 +22,7 @@ is still down, not on release.
 | | Time |
 |---|---|
 | **Power button pressed to picture on screen** | **about 2.9 s** |
-| **Power button pressed to TortOS's shelf** | **about 4.1 s** |
+| **Power button pressed to TortOS's shelf** | **about 3.6 s** |
 
 For comparison, GKD's own system took about 16 s just from the kernel
 starting to its menu program running, and official ROCKNIX took 33 s to its
@@ -318,6 +318,59 @@ since TortOS now shares the CPU with less of Diatom's loading. The boots
 also vary less. The shelf now takes over at about frame 36 of the
 animation's 47, before it reaches the logo.
 
+### 17. TortOS's own startup, step by step
+
+With the system out of the way, most of what was left before the shelf was
+TortOS itself: about 1.2 s from starting to its first frame. TortOS logs a
+time for each step of its startup, and those were split finer (databases,
+library scan, Diatom, video, input, settings, system cards, first frame) to
+see where the time went. Two things stood out.
+
+**The system cards.** TortOS loaded all thirteen system pictures (640x820
+each) one after another before drawing anything, whether or not the system
+shelf was even what came up: about 370 ms. TortOS already had helper threads
+that load game covers in the background, and the system cards now go through
+them too. The ones the first frame shows are asked for early, so the helpers
+load them on the other cores while TortOS sets up the screen, and they are all
+there when the shelf appears. Nothing fills in after it.
+
+**Finding the buttons.** Opening an input device is instant, but closing one
+makes the kernel wait a moment (10 to 50 ms here) for anything still reading
+it to finish. TortOS looked for the gamepad, the volume keys, the power key
+and the headphone jack one at a time, opening and closing every device it
+passed on the way: about 190 ms, nearly all of it closing. It now finds all
+four in one pass and keeps them, so nothing is closed. Diatom found its
+buttons the same way and got the same fix, though that never held up the
+shelf.
+
+Measured from the kernel's log on 2026-10-02, three boots each, times after
+TortOS starts:
+
+| | Before | System cards in the background | And the buttons in one pass |
+|---|---|---|---|
+| System cards | 366 to 388 ms | 30 to 40 ms | 30 to 40 ms |
+| Input and settings | 159 to 240 ms | about the same | 3 to 4 ms |
+| **TortOS's first frame** | **1.15 to 1.22 s** | **0.87 to 0.92 s** | **0.69 to 0.71 s** |
+
+| After the kernel starts | Before | After |
+|---|---|---|
+| **TortOS's shelf on screen** | **about 2.05 s** | **about 1.6 s** (1.57 to 1.68) |
+
+**About 0.45 s sooner to the shelf.** The animation now gives way about
+0.7 s in, around frame 21 of 47.
+
+### 18. Two things that cost nothing
+
+The panel's colors are corrected in the display controller's gamma table
+(kernel patch 7), loaded by the splash just after its first frame. Loaded
+before the first frame it lit the panel 17 ms later, because the hardware
+takes a frame to accept a new table; after it, the wait falls inside the
+pause before the animation's second frame.
+
+And the games partition is now checked and repaired at boot when it was not
+unmounted cleanly (step 12's idea, for the card). Reading the one byte that
+says so costs nothing measurable on a clean boot; a repair took 60 ms.
+
 ## Graphics start-up
 
 Not boot time exactly, but the same question for TortOS: how long until it
@@ -373,3 +426,11 @@ the panel's full 60 fps. On the Brick, SDL and GL alone took about 620 ms.
   could overlap with other work instead of adding to it.
 - **Fewer startup scripts.** TortOS will start directly instead of after a
   list of general-purpose services.
+- **TortOS's settings databases, about 90 ms.** Opening the two settings
+  databases, and a settings file written fresh on every boot.
+- **TortOS's library scan, about 150 ms.** It reads every game folder on the
+  card at each boot. Remembering the last scan would be faster, but knowing
+  when the card has changed is the hard part.
+- **Smaller pictures for this screen.** Covers and system cards are sized for
+  the Brick's 1024x768; this screen shows them at about 60% of that size, so
+  smaller copies would load about 2.5 times faster.
