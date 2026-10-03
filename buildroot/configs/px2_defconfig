@@ -69,6 +69,11 @@ BR2_PACKAGE_JACKSWITCH=y
 # Sound: TortOS, diatom (through SDL2) and jackswitch talk to ALSA directly
 BR2_PACKAGE_ALSA_LIB=y
 
+# Time zones, so local time can be any of them: TortOS's Date & Time chooses
+# one and sets TZ itself. The hardware clock keeps UTC, which is also the
+# system's own zone.
+BR2_TARGET_TZ_INFO=y
+
 # The data partition for games and saves (rootfs-overlay/etc/init.d/
 # datapart): sfdisk and partx add it on the first boot, mkfs.exfat formats
 # it and fsck.exfat repairs it
