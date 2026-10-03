@@ -1,0 +1,57 @@
+MIT License
+
+Copyright (c) 2026 Eric Reinsmidt
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+The license above covers plastron's own files: the build, its packages
+(splash, jackswitch, powerkey, mesa3d-px2), the init scripts, the scripts and
+the docs. Third-party files in this repository keep their own licenses:
+
+  buildroot/board/px2/patches/linux/
+                   Patches to the Linux kernel, from ROCKNIX and from
+                   kernel.org, and our own. GPL-2.0, as the kernel is.
+
+  buildroot/board/px2/dts/
+                   The Pixel 2 device tree, from ROCKNIX, (c) GameKiddy and
+                   Rockchip. GPL-2.0+ OR MIT, as each file states.
+
+  buildroot/board/px2/linux.config.rocknix
+                   ROCKNIX's kernel config for the RK3326, which
+                   scripts/kernel-config.sh starts from.
+
+  buildroot/board/px2/u-boot/
+                   Patches and sources for U-Boot, from ROCKNIX and
+                   Hardkernel, and our own. GPL-2.0+, as U-Boot is.
+
+  buildroot/board/px2/bootloader/
+                   ROCKNIX's bootloader, and ours with U-Boot rebuilt.
+                   Both carry Rockchip's prebuilt DDR init, miniloader and
+                   BL31, redistributed as ROCKNIX does, under Rockchip's
+                   terms (github.com/rockchip-linux/rkbin).
+
+  buildroot/package/splash/frames.bin
+                   TortOS's boot animation, from TortOS. MIT.
+
+The card image the build produces contains much more than this repository:
+the kernel, U-Boot, BusyBox, glibc, Mesa, SDL and the rest, each under its
+own license. Buildroot gathers them, with their sources, by
+`make legal-info`; each release carries that alongside the image.
