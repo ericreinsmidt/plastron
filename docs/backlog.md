@@ -2,29 +2,58 @@
 
 Ideas for later. Not planned yet, just written down so they don't get lost.
 
-## Over The Hare, over the USB cable
+## Over The Hare, over the USB cable (done, 2026-10-05, as Down to the Wire)
 
-On the Brick, Over The Hare moves files to the device over Wi-Fi. The Pixel 2
-has no Wi-Fi or Bluetooth, but it can already look like a network adapter
-over its USB cable (that's how it's worked on in development). Something like
-Over The Hare could run over that link: plug the Pixel into a computer and
-open a page in the browser to add games, saves and audiobooks.
+Eric's idea: Over The Hare, which moves files to the Brick over Wi-Fi, over
+the Pixel's USB cable instead. Done, and tested from a Mac: files both ways,
+and Download logs.
 
-The USB networking is already in every image, release included (S40usbgadget,
-the same link SSH runs over in development). What it would still take:
-
-- **An address a browser can open.** The Pixel only has an IPv6 link-local
-  address on the cable (fe80::...%en10), which browsers won't take as a URL.
-  A plain IPv4 address on usb0, and BusyBox's udhcpd handing the computer one,
-  would let the PIN screen say something like http://10.42.0.1.
-- **Windows.** The gadget speaks ECM, which macOS and Linux understand and
-  Windows doesn't without a driver. NCM works on all three: a kernel option
-  and a line in S40usbgadget.
-- **TortOS showing the row.** Over The Hare is hidden where there's no Wi-Fi;
-  on the Pixel it would show, waiting for the cable.
+- **The name is Down to the Wire**, on the Pixel only; the Brick keeps Over
+  The Hare. Only what people see changed (the row, the screen's title, the
+  web page's title); the code stays `hare`, one server for both.
+- **10.42.0.1 on the cable**, and BusyBox's udhcpd giving the computer an
+  address beside it, with no router and no DNS so a computer never sends its
+  internet traffic this way (S40usbgadget, /etc/udhcpd.conf). About 6.5 ms of
+  boot (boot-time.md, step 20).
+- **The screen always shows 10.42.0.1.** It doesn't try to tell whether a
+  computer is on the other end: the USB controller went on saying
+  "configured" with the cable pulled, and the screen's browser row already
+  says whether a browser is there.
+- **BusyBox's tar gained -z**, which Download logs needed.
+- **SSH stays shut** in a release image: root has no password and dropbear
+  refuses an empty one, so without the development key nobody gets in
+  (checked over the cable 2026-10-05).
 
 It sits beside a USB-C DAC (below) without a fight: the ID pin picks the role,
 device for a computer's cable, host for a DAC.
+
+Still to do: **Windows.** The cable speaks ECM, which macOS and Linux
+understand and Windows doesn't without a driver. NCM works on all three: a
+kernel option and a line in S40usbgadget. Needs a Windows PC to test.
+
+## The LEDs on the side
+
+Five LEDs, battery0 to battery4 in the device tree: GPIO1_B2 and B4 to B7,
+plain on/off (max_brightness 1), driven only by the SoC. Nothing in plastron
+or TortOS sets them, so they are off all the time, which already costs no
+battery. The names suggest a five-step battery gauge, which is presumably what
+GKD's system used them for.
+
+What could drive them, all already in our kernel (checked 2026-10-05):
+
+- **Charging.** The kernel's battery-charging, battery-full and
+  battery-charging-blink-full-solid triggers, and rk817-charger-online. A
+  trigger set once at boot, and the kernel does the rest.
+- **A battery gauge.** Five steps of 20%, shown by TortOS or a small daemon.
+  Better shown briefly (on a button, or at power on) than all the time.
+- **Blinking**, by the timer and heartbeat triggers, for something like a low
+  battery warning.
+
+Dimming isn't possible in hardware: the pins are plain GPIO, not PWM. The
+kernel could switch them fast enough to look dimmer (a software PWM), but
+waking the CPU a hundred times a second would likely cost more battery than
+the LEDs. Open: what Eric wants them to say, if anything; how much current
+one lit LED draws (measure, as the backlight was).
 
 ## Offer our kernel fixes upstream
 

@@ -2,6 +2,10 @@
 # USB networking over the cable (CDC ECM). The MAC addresses are fixed, so
 # the Mac keeps one interface for this device and the Pixel's IPv6
 # link-local address never changes: fe80::70:78ff:fe32:1
+#
+# And 10.42.0.1, with udhcpd giving the computer an address beside it
+# (/etc/udhcpd.conf): browsers won't open a link-local address, and
+# TortOS's Down to the Wire shows this one.
 GADGET=/sys/kernel/config/usb_gadget/px2
 
 case "$1" in
@@ -33,8 +37,11 @@ start)
 	[ -e configs/c.1/ecm.usb0 ] || ln -s "$GADGET/functions/ecm.usb0" configs/c.1/
 	ls /sys/class/udc | head -n1 > UDC
 	ip link set usb0 up
+	ip addr add 10.42.0.1/24 dev usb0
+	udhcpd /etc/udhcpd.conf
 	;;
 stop)
+	killall udhcpd 2>/dev/null
 	echo "" > "$GADGET/UDC"
 	;;
 esac

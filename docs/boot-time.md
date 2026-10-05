@@ -385,6 +385,20 @@ within the boot-to-boot spread.
 **About 22 ms later to the kernel, nothing measurable at the shelf.**
 Plugging the cable in after boot still works.
 
+### 20. A DHCP server on the USB cable (a cost)
+
+For TortOS's Down to the Wire, the file transfer over the cable: the Pixel
+takes 10.42.0.1 on the cable, and BusyBox's small DHCP server gives the
+computer an address beside it, so a browser has an address to open. The
+server is started by the same startup script as the USB networking, and goes
+off on its own straight away.
+
+Starting it takes about 6.5 ms of that script (20 starts in a row took
+130 ms, measured on the device 2026-10-05). After that it sleeps until a
+computer asks for an address.
+
+**About 6.5 ms more in the startup scripts.**
+
 ## Graphics start-up
 
 Not boot time exactly, but the same question for TortOS: how long until it
