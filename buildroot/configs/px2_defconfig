@@ -65,6 +65,8 @@ BR2_PACKAGE_SDL2_OPENGLES=y
 # A press of the power button shuts down cleanly
 BR2_PACKAGE_POWERKEY=y
 BR2_PACKAGE_JACKSWITCH=y
+# The USB port a host for a USB-C DAC, a device for a computer, by the ID pin
+BR2_PACKAGE_USBROLE=y
 
 # Sound: TortOS, diatom (through SDL2) and jackswitch talk to ALSA directly
 BR2_PACKAGE_ALSA_LIB=y

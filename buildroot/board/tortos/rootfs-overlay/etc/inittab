@@ -27,6 +27,7 @@ null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 ::sysinit:/etc/init.d/rcS
 
 ::respawn:/usr/sbin/jackswitch
+::respawn:/usr/sbin/usbrole
 
 # Busybox runs these before it kills the remaining processes, so stop them
 # here first: anything still holding a file open for writing (Mesa's shader

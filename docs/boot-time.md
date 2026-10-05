@@ -371,6 +371,20 @@ And the games partition is now checked and repaired at boot when it was not
 unmounted cleanly (step 12's idea, for the card). Reading the one byte that
 says so costs nothing measurable on a clean boot; a repair took 60 ms.
 
+### 19. USB's host side is back, for a USB-C DAC (a cost)
+
+Step 10 took out USB's host side. It came back so headphones can go through
+a USB-C DAC: the port is a host while a DAC is plugged in and a device for a
+computer otherwise, with USB audio in the kernel and nothing else on the host
+side (no storage, no gamepads).
+
+The kernel went from **12.54 MB to 13.16 MB**, so U-Boot takes about 22 ms
+longer to read it. To the shelf it measured 2.85 s before and 2.90 s after,
+within the boot-to-boot spread.
+
+**About 22 ms later to the kernel, nothing measurable at the shelf.**
+Plugging the cable in after boot still works.
+
 ## Graphics start-up
 
 Not boot time exactly, but the same question for TortOS: how long until it

@@ -1,0 +1,6 @@
+config BR2_PACKAGE_USBROLE
+	bool "usbrole"
+	help
+	  Makes the USB port a host while something that wants power is
+	  plugged into it (a USB-C DAC), and a device otherwise, by the
+	  ID pin. Started by init, with respawn.
