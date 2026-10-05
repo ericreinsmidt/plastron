@@ -10,7 +10,21 @@ over its USB cable (that's how it's worked on in development). Something like
 Over The Hare could run over that link: plug the Pixel into a computer and
 open a page in the browser to add games, saves and audiobooks.
 
-Much further down the line, once TortOS runs on the Pixel.
+The USB networking is already in every image, release included (S40usbgadget,
+the same link SSH runs over in development). What it would still take:
+
+- **An address a browser can open.** The Pixel only has an IPv6 link-local
+  address on the cable (fe80::...%en10), which browsers won't take as a URL.
+  A plain IPv4 address on usb0, and BusyBox's udhcpd handing the computer one,
+  would let the PIN screen say something like http://10.42.0.1.
+- **Windows.** The gadget speaks ECM, which macOS and Linux understand and
+  Windows doesn't without a driver. NCM works on all three: a kernel option
+  and a line in S40usbgadget.
+- **TortOS showing the row.** Over The Hare is hidden where there's no Wi-Fi;
+  on the Pixel it would show, waiting for the cable.
+
+It sits beside a USB-C DAC (below) without a fight: the ID pin picks the role,
+device for a computer's cable, host for a DAC.
 
 ## Offer our kernel fixes upstream
 
