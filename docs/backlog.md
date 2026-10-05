@@ -42,3 +42,24 @@ known to work on it. TortOS asks the device file whether it has either radio
 doesn't. The Pixel's answers could check for an adapter instead of always
 saying no, and the kernel would need the dongle's driver. Waiting on a dongle
 to test with.
+
+## Sound through a USB-C DAC
+
+Eric's idea (2026-10-04): headphones through a USB-C DAC, beside the speaker
+and the headphone jack. Three things stand in the way, in this order:
+
+- **The port has to be a host.** plastron's kernel makes the USB port
+  device-only (that's what fixed plugging the cable in after boot), and the
+  Pixel would have to power the DAC (VBUS) and know when something is plugged
+  in that wants power rather than gives it. ROCKNIX warns that switching to
+  host while a computer powers the port can damage the board. A USB Wi-Fi
+  dongle is known to work on the Pixel, so the hardware can do it.
+- **The kernel needs USB audio** (snd-usb-audio, which plastron leaves out),
+  and USB host support back in.
+- **The sound has to go there.** TortOS's Audio Output picks speaker, wired or
+  Bluetooth; USB would be a fourth place, for Muse and diatom both.
+
+Testing host mode costs the USB link plastron is developed over, the one cable
+does both, so checks then run blind and report through a log on the card.
+A USB thumb drive on a USB-C adapter proves host mode and power before any
+DAC is bought.
