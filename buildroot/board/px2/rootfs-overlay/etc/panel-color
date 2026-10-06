@@ -1,0 +1,9 @@
+# The panel's color matrix, read by Diatom when it starts: nine numbers, row
+# by row, applied in linear light to what it draws (games, and its menu).
+# Beside the Brick Hammer this panel shows greens yellow - its green has no
+# blue in it where the Brick's has some - which the splash's curve per channel
+# can't fix, as it can't add blue to a pixel that has none. Tuned by eye
+# 2026-10-07: blue gains a tenth of green. A colorimeter will refine it.
+1 0 0
+0 1 0
+0 0.10 1

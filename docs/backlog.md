@@ -46,6 +46,53 @@ Not part of the gate, still open from v1.3.0: tortos.games says Brick only,
 and the legal-info lacks license files for plastron's own jackswitch,
 powerkey and splash.
 
+## A color matrix for the Pixel's panel (games from v1.4.0, the rest later)
+
+Out of the v1.4.0 gate, Eric 2026-10-07: he is ordering a colorimeter, and
+the full fix goes into a later release. What v1.4.0 has: games through the
+matrix tuned by eye below, Diatom reading /etc/panel-color (blue gains a
+tenth of green); the shelf without it. Beside the Brick the Pixel shows greens yellow
+and loses purples and magentas (the glow behind the Master System card).
+Tested 2026-10-06, live against the Brick Hammer, two scenes and two filmed
+sweeps: the splash's curve per channel can't fix both, because the cause is
+the panel's own primaries. Its green is yellower (no blue in it where the
+Brick's has some), and red has to stay strong in purple but out of green. A
+curve only sees one channel at a time, so less red brought the purple back
+and turned grass yellow, and more blue tinted whites without reaching the
+greens. The splash's curve stays (red and green 1.5, blue 1.0), the best a
+curve does.
+
+- **With the colorimeter:** solid patches on each screen (red, green, blue,
+  white, greys; on the Pixel the gamma table itself can fill the screen with
+  one color), read with ArgyllCMS on the Mac, and the matrix calculated from
+  the readings rather than guessed, then checked by eye. It could match the
+  Brick, or sRGB.
+- **By eye first, 2026-10-07,** in a Diatom test build that read the matrix
+  from a file while a game ran (Super Mario World, the forest, against the
+  Brick Hammer, both at full brightness): adding blue in proportion to green,
+  in linear light, took the yellow out of the greens, and 0.10 beat 0.15
+  (0.15 went a little past the Brick). Pulling red out of greens changed
+  nothing, as SNES greens carry no red. Easing green's curve to 1.3 made them
+  brighter but no closer. The greens stay darker and less vibrant than the
+  Brick's: that is the panel's own limit, which no matrix can lift. The
+  present step took 1.9 to 2.0 ms a frame with the matrix; without it was
+  not measured.
+- **The shelf, 2026-10-07:** a prototype draws TortOS's turned copy through
+  the same matrix (TortOS branch panel-matrix-shelf; SDL keeps red and blue
+  swapped in that texture, so the shader reads .bgr). By eye the shelf was
+  no clearer with it. Its trouble is red: purples (the GBA's body, the
+  glow behind the Master System card) lose theirs to the curve's red cut.
+  Easing red to 1.2 brought the glow back but tinted the dark parts red;
+  an eased curve (1.5 in the darks, near none at the top) lost to 1.5; and
+  the shelf with no correction at all looked better to Eric, if not right,
+  while games without it showed greens yellow again. So the curve stays at
+  1.5 for now, and red is the first thing to measure.
+- **Where it goes:** a 3x3 matrix in the final drawing step of Diatom (its
+  own GPU shaders in port/pixel2.c, a line each) and TortOS (its turned copy
+  to the panel in src/device/pixel2.c, today an SDL_RenderCopyEx, to become
+  a direct GPU draw), read from one file on the system partition so the two
+  can't disagree; the splash's frames get it when they are built.
+
 ## Over The Hare, over the USB cable (done, 2026-10-05, as Down To The Wire)
 
 Eric's idea: Over The Hare, which moves files to the Brick over Wi-Fi, over
