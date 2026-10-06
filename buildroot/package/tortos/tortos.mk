@@ -57,10 +57,12 @@ endef
 # payload (mk/payload.sh, DEVICE=pixel2): the launcher, Muse, diatom, the
 # cores, cards and fonts, and the empty Roms, Bios and Saves folders. The
 # image keeps a copy in /usr/share/tortos/card, laid out as on the card, and
-# /etc/init.d/tortos copies it there when the card has no TortOS.
+# /etc/init.d/tortos copies it there when the card has no TortOS, or an older
+# one: the version goes in as TortOS/VERSION, which the payload writes only
+# when it is given one (it was never passed before 2026-10-06).
 TORTOS_CARD = $(TARGET_DIR)/usr/share/tortos/card
 define TORTOS_INSTALL_TARGET_CMDS
-	DEVICE=pixel2 OUT=$(TORTOS_CARD) ZIP= \
+	DEVICE=pixel2 OUT=$(TORTOS_CARD) ZIP= VERSION="$(TORTOS_VERSION_NUMBER)" \
 		TORTOS_ELF=$(@D)/$(TORTOS_BUILD_DIR)/tortos.elf \
 		MUSE_ELF=$(@D)/$(TORTOS_BUILD_DIR)/muse \
 		DIATOM_ELF=$(DIATOM_DIR)/build/pixel2/diatom \

@@ -399,6 +399,27 @@ computer asks for an address.
 
 **About 6.5 ms more in the startup scripts.**
 
+### 21. Checking for a newer TortOS (a cost)
+
+The TortOS Installer can now update a Pixel's card without erasing it: it
+writes the new system and leaves the games partition alone. TortOS's own
+files live on that partition, though, so the system has to bring the new
+TortOS across itself. At every boot it compares the version on the card with
+the one in the system, and copies TortOS over when the system's is newer.
+
+The system's version is written into the startup script when the image is
+built, so a boot only reads the card's. That costs about 1 ms, because the
+card's TortOS folder has just been read to find TortOS anyway. Reading the
+system's copy too would have cost another 5 to 8 ms, which is why it isn't.
+Measured on the device 2026-10-06, with the cache emptied first.
+
+Once, on the first boot after an update, the copy itself: TortOS's 24 MB took
+4.1 s, so the boot animation plays that much longer. Every boot after that
+is back to normal: TortOS's first frame at 1.67 s from the kernel, against
+7.07 s on the boot that copied.
+
+**About 1 ms more at every boot, and about 4 s once after an update.**
+
 ## Graphics start-up
 
 Not boot time exactly, but the same question for TortOS: how long until it

@@ -9,12 +9,22 @@
 # A card with no TortOS on it gets the copy this image carries first: on the
 # first boot of a freshly written card, and again whenever TortOS goes
 # missing from it (the partition wiped from a Mac, an update gone wrong).
+# And a card with an older TortOS than the image's gets it too: the installer's
+# system-only update writes a new image but leaves the card's games partition,
+# TortOS/ included, as it was. Never an older one over a newer, so a TortOS
+# copied onto the card by hand stays until an image newer than it comes.
 #
 # TortOS handles the power button itself (it saves a running game first), so
 # powerkey only runs when there is no TortOS on the card to do it.
 CARD=/mnt/SDCARD
 LAUNCH=$CARD/TortOS/launch.sh
 SEED=/usr/share/tortos/card
+# The image's TortOS version as version_of gives it (below), written in by the
+# build (board/px2/post-build.sh) so a boot never reads the image's VERSION
+# file: that read cost 5 to 8 ms, the card's 1 ms, as the card's folder has
+# just been read for launch.sh (measured 2026-10-06). Empty in an image built
+# without a version, which then never copies over a card's TortOS.
+SEED_V=
 
 # Only ever adds: TortOS keeps its own state in TortOS/ (where it was, what
 # was playing), and the Roms, Bios and Saves folders may already hold the
@@ -22,7 +32,6 @@ SEED=/usr/share/tortos/card
 # but TortOS's own files. launch.sh goes last, after a sync, so a copy cut
 # short leaves no launch.sh and the next boot starts it over.
 seed() {
-	echo "tortos: no TortOS on the card; copying it from the image" > /dev/kmsg
 	mkdir -p "$CARD/TortOS" || return 1
 	for f in "$SEED/TortOS/"* "$SEED/TortOS/".[!.]*; do
 		[ -e "$f" ] || continue
@@ -39,8 +48,36 @@ seed() {
 	echo "tortos: TortOS copied onto the card" > /dev/kmsg
 }
 
+# The version in file $1 as one number in $v, 1.4.0 as 1004000, or false
+# when there is no file or it is not a version. Builtins only: this runs at
+# every boot, and a fork costs more than the whole check.
+version_of() {
+	v=
+	[ -f "$1" ] || return 1
+	IFS=. read -r a b c < "$1"
+	case "$a.$b.${c:-0}" in
+	*[!0-9.]* | .* | *..*) return 1 ;;
+	esac
+	v=$((a * 1000000 + b * 1000 + ${c:-0}))
+}
+
+# Whether the image carries a newer TortOS than the card. A card with no
+# version has one older than any that says: every card written before
+# 2026-10-06, when the file began.
+newer_seed() {
+	[ -n "$SEED_V" ] || return 1
+	version_of "$CARD/TortOS/VERSION" || return 0
+	[ "$SEED_V" -gt "$v" ]
+}
+
 start() {
 	if [ ! -f "$LAUNCH" ] && [ -f "$SEED/TortOS/launch.sh" ]; then
+		echo "tortos: no TortOS on the card; copying it from the image" > /dev/kmsg
+		seed || echo "tortos: couldn't copy TortOS onto the card" > /dev/kmsg
+	elif [ -f "$LAUNCH" ] && newer_seed; then
+		echo "tortos: the image carries a newer TortOS than the card; copying it" > /dev/kmsg
+		# launch.sh first, so a copy cut short starts over at the next boot
+		rm -f "$LAUNCH"
 		seed || echo "tortos: couldn't copy TortOS onto the card" > /dev/kmsg
 	fi
 	if [ -f "$LAUNCH" ]; then
