@@ -8,7 +8,7 @@
 # CONFIG_CROND is not set
 
 # A DHCP server for the USB cable, so the computer on the other end gets an
-# address and Down to the Wire has one a browser opens (S40usbgadget).
+# address and Down To The Wire has one a browser opens (S40usbgadget).
 CONFIG_UDHCPD=y
 CONFIG_DHCPD_LEASES_FILE="/var/lib/misc/udhcpd.leases"
 

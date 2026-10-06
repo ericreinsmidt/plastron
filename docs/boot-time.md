@@ -387,7 +387,7 @@ Plugging the cable in after boot still works.
 
 ### 20. A DHCP server on the USB cable (a cost)
 
-For TortOS's Down to the Wire, the file transfer over the cable: the Pixel
+For TortOS's Down To The Wire, the file transfer over the cable: the Pixel
 takes 10.42.0.1 on the cable, and BusyBox's small DHCP server gives the
 computer an address beside it, so a browser has an address to open. The
 server is started by the same startup script as the USB networking, and goes

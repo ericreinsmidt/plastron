@@ -5,7 +5,7 @@
 #
 # And 10.42.0.1, with udhcpd giving the computer an address beside it
 # (/etc/udhcpd.conf): browsers won't open a link-local address, and
-# TortOS's Down to the Wire shows this one.
+# TortOS's Down To The Wire shows this one.
 GADGET=/sys/kernel/config/usb_gadget/px2
 
 case "$1" in

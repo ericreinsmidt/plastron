@@ -2,13 +2,13 @@
 
 Ideas for later. Not planned yet, just written down so they don't get lost.
 
-## Over The Hare, over the USB cable (done, 2026-10-05, as Down to the Wire)
+## Over The Hare, over the USB cable (done, 2026-10-05, as Down To The Wire)
 
 Eric's idea: Over The Hare, which moves files to the Brick over Wi-Fi, over
 the Pixel's USB cable instead. Done, and tested from a Mac: files both ways,
 and Download logs.
 
-- **The name is Down to the Wire**, on the Pixel only; the Brick keeps Over
+- **The name is Down To The Wire**, on the Pixel only; the Brick keeps Over
   The Hare. Only what people see changed (the row, the screen's title, the
   web page's title); the code stays `hare`, one server for both.
 - **10.42.0.1 on the cable**, and BusyBox's udhcpd giving the computer an
