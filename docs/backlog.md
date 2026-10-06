@@ -1,6 +1,50 @@
 # Backlog
 
-Ideas for later. Not planned yet, just written down so they don't get lost.
+Ideas for later. Not planned yet, just written down so they don't get lost,
+except the first section, which is the gate for the next release.
+
+## Before TortOS v1.4.0 (a release gate)
+
+Decided with Eric 2026-10-06. **v1.4.0 does not ship until every box below is
+ticked.** It spans TortOS, plastron and a new installer, and lives here
+because this is the one backlog.
+
+- [ ] **A new installer.** Written from scratch under Eric's own license, not
+  the fork of spruceOS's installer: a Tauri app (an HTML and CSS front end on
+  a Rust core), in TortOS's own look, built on the Mac for all three systems
+  and pushed to GitHub by hand, with no workflows. It installs and updates the
+  Brick, installs the Pixel fresh and updates its system without touching the
+  games partition, and reads what is on a card to offer Update or Fresh
+  install and to refuse a card from the other device. No box art: a fresh card
+  has no games yet, and anyone updating already gets art on the Brick or
+  through Down To The Wire. On Linux a .deb and an .rpm, no AppImage. The
+  fork's `pixel-system-update` branch proved the update on macOS, Windows and
+  Linux and is the reference.
+- [ ] **Down To The Wire on Windows.** The cable speaks ECM, which Windows
+  has no driver for (see the first done entry below). Add NCM, and test it
+  from a Mac, Linux and Windows without breaking the Mac. Without it, a
+  Pixel owner on Windows gets neither Wire nor box art.
+- [ ] **Commit what is done and tested.** TortOS: the payload writes
+  `TortOS/VERSION`, and the README's paragraph on updating. plastron:
+  `TortOS/` copied over when the image's TortOS is newer, the version passed
+  to the payload and written into the startup script, and boot-time.md step
+  21.
+- [ ] **The README for the new picture.** The Pixel's section points to the
+  new installer, "the TortOS Installer can fetch box art" goes, Wire's
+  "Windows not yet" changes, and the v1.3.0 file names move on.
+- [ ] **TortOS's version to 1.4.0.**
+- [ ] **A release build, tested.** The update from v1.3.0 on a v1.3.0 card
+  with games on it, from a Mac and from Windows; a fresh install on a blank
+  card; and the Brick, which shares Muse's tidying of the Music folder and
+  the covers in Over The Hare's lists.
+- [ ] **The old installer.** Its v1.1.0 asks its own repository for updates,
+  so its users would never hear of the new one: a last release that points
+  to the new installer, then archive the repository. And delete its
+  `beta-pixel-system-update` pre-release.
+
+Not part of the gate, still open from v1.3.0: tortos.games says Brick only,
+and the legal-info lacks license files for plastron's own jackswitch,
+powerkey and splash.
 
 ## Over The Hare, over the USB cable (done, 2026-10-05, as Down To The Wire)
 
