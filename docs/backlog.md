@@ -37,10 +37,12 @@ because this is the one backlog.
   TortOS 56f1426, with the guide; pushed on release day with the rest.
 - [x] **TortOS's version to 1.4.0.** TortOS's Makefile, which plastron's
   image reads it from (pushed on release day).
-- [ ] **A release build, tested.** The update from v1.3.0 on a v1.3.0 card
+- [x] **A release build, tested.** The update from v1.3.0 on a v1.3.0 card
   with games on it, from a Mac and from Windows; a fresh install on a blank
   card; and the Brick, which shares Muse's tidying of the Music folder and
-  the covers in Over The Hare's lists.
+  the covers in Over The Hare's lists. All passed 2026-10-07 with TortOS
+  Installer 2.0.0. The first build showed the release kept old builds of the
+  packages it makes from working trees; fixed in scripts/release.sh.
 - [ ] **The old installer.** On v1.4.0's release day, all at once, so the
   README's links never land on an empty repository: rename TortOS-Installer
   to TortOS-Installer-spruce, create tortos-installer and publish 2.0.0, then
