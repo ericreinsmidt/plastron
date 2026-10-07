@@ -9,7 +9,7 @@ Decided with Eric 2026-10-06. **v1.4.0 does not ship until every box below is
 ticked.** It spans TortOS, plastron and a new installer, and lives here
 because this is the one backlog.
 
-- [ ] **A new installer.** Written from scratch under Eric's own license, not
+- [x] **A new installer.** Written from scratch under Eric's own license, not
   the fork of spruceOS's installer: a Tauri app (an HTML and CSS front end on
   a Rust core), in TortOS's own look, built on the Mac for all three systems
   and pushed to GitHub by hand, with no workflows. It installs and updates the
@@ -19,7 +19,9 @@ because this is the one backlog.
   has no games yet, and anyone updating already gets art on the Brick or
   through Down To The Wire. On Linux a .deb and an .rpm, no AppImage. The
   fork's `pixel-system-update` branch proved the update on macOS, Windows and
-  Linux and is the reference.
+  Linux and is the reference. Built 2026-10-07: TortOS Installer 2.0.0, in
+  `~/Developer/TortOS-Installer`, tested on real cards for both devices; it
+  goes on GitHub with v1.4.0 (the last box).
 - [x] **Down To The Wire on Windows.** The cable speaks NCM now, with
   Microsoft's descriptor naming Windows' own driver; tested from a Mac,
   Windows 11 and Linux, 2026-10-06 and 07 (the first done entry below).
@@ -37,10 +39,12 @@ because this is the one backlog.
   with games on it, from a Mac and from Windows; a fresh install on a blank
   card; and the Brick, which shares Muse's tidying of the Music folder and
   the covers in Over The Hare's lists.
-- [ ] **The old installer.** Its v1.1.0 asks its own repository for updates,
-  so its users would never hear of the new one: a last release that points
-  to the new installer, then archive the repository. And delete its
-  `beta-pixel-system-update` pre-release.
+- [ ] **The old installer.** On v1.4.0's release day, all at once, so the
+  README's links never land on an empty repository: rename TortOS-Installer
+  to TortOS-Installer-spruce, create tortos-installer and publish 2.0.0, then
+  archive the old one. Its v1.1.0 never asks for updates, so it needs no last
+  release. Eric deletes its two pre-releases, `beta-pixel-system-update` and
+  `beta-main`.
 
 Not part of the gate, still open from v1.3.0: tortos.games says Brick only,
 and the legal-info lacks license files for plastron's own jackswitch,
