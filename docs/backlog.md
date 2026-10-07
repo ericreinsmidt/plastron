@@ -35,7 +35,8 @@ because this is the one backlog.
   new installer, "the TortOS Installer can fetch box art" goes, Wire's
   "Windows not yet" changes, and the v1.3.0 file names move on. Done in
   TortOS 56f1426, with the guide; pushed on release day with the rest.
-- [ ] **TortOS's version to 1.4.0.**
+- [x] **TortOS's version to 1.4.0.** TortOS's Makefile, which plastron's
+  image reads it from (pushed on release day).
 - [ ] **A release build, tested.** The update from v1.3.0 on a v1.3.0 card
   with games on it, from a Mac and from Windows; a fresh install on a blank
   card; and the Brick, which shares Muse's tidying of the Music folder and
