@@ -50,9 +50,10 @@ because this is the one backlog.
   release. Eric deletes its two pre-releases, `beta-pixel-system-update` and
   `beta-main`.
 
-Not part of the gate, still open from v1.3.0: tortos.games says Brick only,
-and the legal-info lacks license files for plastron's own jackswitch,
-powerkey and splash.
+Not part of the gate, still open from v1.3.0: tortos.games says Brick only.
+(The legal-info's missing license files for plastron's own jackswitch,
+powerkey and splash were added in 4f6d283; v1.4.0's sources tar has all
+three.)
 
 ## A color matrix for the Pixel's panel (games from v1.4.0, the rest later)
 
