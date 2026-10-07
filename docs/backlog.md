@@ -48,12 +48,9 @@ because this is the one backlog.
   to TortOS-Installer-spruce, create tortos-installer and publish 2.0.0, then
   archive the old one. Its v1.1.0 never asks for updates, so it needs no last
   release. Eric deletes its two pre-releases, `beta-pixel-system-update` and
-  `beta-main`.
-
-Not part of the gate, still open from v1.3.0: tortos.games says Brick only.
-(The legal-info's missing license files for plastron's own jackswitch,
-powerkey and splash were added in 4f6d283; v1.4.0's sources tar has all
-three.)
+  `beta-main`. And tortos.games' "Or use the TortOS Installer" link moves to
+  tortos-installer (on htpc); the old address works either way, as GitHub
+  ignores case.
 
 ## A color matrix for the Pixel's panel (games from v1.4.0, the rest later)
 
