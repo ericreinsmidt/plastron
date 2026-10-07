@@ -31,9 +31,10 @@ because this is the one backlog.
   `TortOS/` copied over when the image's TortOS is newer, the version passed
   to the payload and written into the startup script, and boot-time.md step
   21.
-- [ ] **The README for the new picture.** The Pixel's section points to the
+- [x] **The README for the new picture.** The Pixel's section points to the
   new installer, "the TortOS Installer can fetch box art" goes, Wire's
-  "Windows not yet" changes, and the v1.3.0 file names move on.
+  "Windows not yet" changes, and the v1.3.0 file names move on. Done in
+  TortOS 56f1426, with the guide; pushed on release day with the rest.
 - [ ] **TortOS's version to 1.4.0.**
 - [ ] **A release build, tested.** The update from v1.3.0 on a v1.3.0 card
   with games on it, from a Mac and from Windows; a fresh install on a blank
