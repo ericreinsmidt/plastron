@@ -3,7 +3,7 @@
 Ideas for later. Not planned yet, just written down so they don't get lost,
 except the first section, which is the gate for the next release.
 
-## Before TortOS v1.4.0 (a release gate)
+## Before TortOS v1.4.0 (a release gate, shipped 2026-10-07)
 
 Decided with Eric 2026-10-06. **v1.4.0 does not ship until every box below is
 ticked.** It spans TortOS, plastron and a new installer, and lives here
@@ -43,14 +43,17 @@ because this is the one backlog.
   the covers in Over The Hare's lists. All passed 2026-10-07 with TortOS
   Installer 2.0.0. The first build showed the release kept old builds of the
   packages it makes from working trees; fixed in scripts/release.sh.
-- [ ] **The old installer.** On v1.4.0's release day, all at once, so the
+- [x] **The old installer.** On v1.4.0's release day, all at once, so the
   README's links never land on an empty repository: rename TortOS-Installer
   to TortOS-Installer-spruce, create tortos-installer and publish 2.0.0, then
   archive the old one. Its v1.1.0 never asks for updates, so it needs no last
   release. Eric deletes its two pre-releases, `beta-pixel-system-update` and
   `beta-main`. And tortos.games' "Or use the TortOS Installer" link moves to
   tortos-installer (on htpc); the old address works either way, as GitHub
-  ignores case.
+  ignores case. Done 2026-10-07: TortOS v1.4.0 and TortOS Installer 2.0.0
+  published, the old repository renamed and archived with only v1.1.0 left,
+  and the site's download button is the installer now, with TortOS's own
+  files a line below it.
 
 ## A color matrix for the Pixel's panel (games from v1.4.0, the rest later)
 
