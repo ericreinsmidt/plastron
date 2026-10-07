@@ -43,12 +43,6 @@ disk images. It erases the whole card.
 The first boot adds an exFAT partition over the rest of the card, for games,
 saves and music, which a Mac or PC can read and write (labeled TORTOS).
 
-## Boot time
-
-What's been done to make it boot fast, step by step and with measurements,
-is in [docs/boot-time.md](docs/boot-time.md). How TortOS and diatom were
-brought over from the Brick is in [docs/tortos-plan.md](docs/tortos-plan.md).
-
 ## Building
 
 Needs Docker. Everything else - the cross-compiler included - Buildroot
