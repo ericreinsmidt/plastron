@@ -20,12 +20,12 @@ because this is the one backlog.
   through Down To The Wire. On Linux a .deb and an .rpm, no AppImage. The
   fork's `pixel-system-update` branch proved the update on macOS, Windows and
   Linux and is the reference.
-- [ ] **Down To The Wire on Windows.** The cable speaks ECM, which Windows
-  has no driver for (see the first done entry below). Add NCM, and test it
-  from a Mac, Linux and Windows without breaking the Mac. Without it, a
-  Pixel owner on Windows gets neither Wire nor box art.
-- [ ] **Commit what is done and tested.** TortOS: the payload writes
-  `TortOS/VERSION`, and the README's paragraph on updating. plastron:
+- [x] **Down To The Wire on Windows.** The cable speaks NCM now, with
+  Microsoft's descriptor naming Windows' own driver; tested from a Mac,
+  Windows 11 and Linux, 2026-10-06 and 07 (the first done entry below).
+- [x] **Commit what is done and tested.** TortOS: the payload writes
+  `TortOS/VERSION` (the README's paragraph on updating waits for the new
+  installer, in the README item below). plastron:
   `TortOS/` copied over when the image's TortOS is newer, the version passed
   to the payload and written into the startup script, and boot-time.md step
   21.
@@ -118,9 +118,25 @@ and Download logs.
 It sits beside a USB-C DAC (below) without a fight: the ID pin picks the role,
 device for a computer's cable, host for a DAC.
 
-Still to do: **Windows.** The cable speaks ECM, which macOS and Linux
-understand and Windows doesn't without a driver. NCM works on all three: a
-kernel option and a line in S40usbgadget. Needs a Windows PC to test.
+**Windows, done 2026-10-07.** The cable spoke ECM, which macOS and Linux
+understand and Windows has no driver for. It speaks NCM now (the kernel's
+CONFIG_USB_CONFIGFS_NCM, and S40usbgadget), which all three have a driver
+for, with Microsoft's OS descriptor marking it WINNCM so Windows loads its
+own without being asked; the device number moved to 0x0201, so a computer
+that met the ECM Pixel looks again. Tested over the cable:
+
+- **macOS:** Apple's own NCM driver; files both ways, logs.
+- **Windows 11:** "UsbNcm Host Device", nothing to install; files both
+  ways, logs, and the page's box art (11 games without a cover down to 1).
+- **Linux** (Ubuntu 24.04 in a VM, the Pixel passed through): cdc_ncm,
+  10.42.0.2 from the Pixel, files both ways, logs. A desktop install has
+  the driver and brings the link up by itself; Ubuntu's minimal cloud image
+  needed linux-modules-extra and a DHCP setting.
+- **Unexplained, once:** after a move from the Mac to Windows the Pixel
+  stopped presenting itself to either until it restarted (2026-10-06). Six
+  moves after that, one straight after loaded transfers, all came back. If
+  it happens again, log the role switch, the extcon cables and the UDC's
+  state to the card every half second, and the kernel log beside them.
 
 ## The LEDs on the side
 
