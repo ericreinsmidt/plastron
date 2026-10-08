@@ -13,9 +13,9 @@
  *     five seconds.
  *   - Otherwise nothing, so they cost nothing.
  *   - Asked (SIGUSR1, which TortOS sends on L2+R2 outside a game): the level
- *     flashes twice in a second, over whatever else is showing. 75 to 100%
- *     is all four, 50 to 74 the bottom three, 25 to 49 two, 10 to 24 one,
- *     and under 10 the bottom light red.
+ *     flashes four times in two seconds, over whatever else is showing.
+ *     75 to 100% is all four, 50 to 74 the bottom three, 25 to 49 two, 10 to
+ *     24 one, and under 10 the bottom light red.
  *
  * It sleeps on the kernel's uevents (a charger plugged in or out, the battery
  * reporting) and wakes on a timer only while something moves: every step of
@@ -49,7 +49,7 @@
 #define STEP_MS      400    /* the charging bar's pace */
 #define LOW_EVERY_MS 5000   /* the low-battery flash, once this often */
 #define LOW_ON_MS    200
-#define ASK_MS       1000   /* asked: two flashes in this long */
+#define ASK_MS       2000   /* asked: four flashes in this long */
 #define IDLE_MS      30000  /* nothing showing: look at the level this often */
 #define LOW          10
 
@@ -219,7 +219,7 @@ int main(void)
 			}
 		}
 
-		/* Asked: two flashes over the rest, on and off a quarter second each */
+		/* Asked: four flashes over the rest, on and off a quarter second each */
 		if (asked_at >= 0) {
 			long t = now - asked_at;
 
