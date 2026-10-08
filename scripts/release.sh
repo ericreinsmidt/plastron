@@ -19,7 +19,9 @@ RELEASE=/work/release
 # without this a release ships whatever was last built, under the new
 # version's name. v1.4.0's first build carried TortOS 1.3.0 that way.
 LOCAL=$(grep -l '_SITE_METHOD = local' /src/buildroot/package/*/*.mk | sed 's|.*/\([^/]*\)\.mk$|\1-dirclean|')
-PLASTRON_RELEASE=1 sh /src/scripts/build.sh $LOCAL all legal-info
+# The kernel too, built again from its tree as it stands, so the device tree
+# (board/px2/dts, copied in before each build) is the one in the repository
+PLASTRON_RELEASE=1 sh /src/scripts/build.sh $LOCAL linux-rebuild all legal-info
 
 # Checked, not trusted: the build has no key of its own to leave behind, but a
 # leftover in the output from a development build would ship to everyone

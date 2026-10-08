@@ -277,29 +277,36 @@
 		};
 	};
 
+	/*
+	 * The four lights on the side, bottom to top: battery0 and battery1 are
+	 * the bottom light's red and green, battery2 to battery4 the three
+	 * green ones above it. Each lights when its pin is LOW (checked on the
+	 * device 2026-10-08): written as active-high, the kernel's "off" lit
+	 * all of them for as long as the system ran.
+	 */
 	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
 		pinctrl-0 = <&led_gpio>;
 
 		led-0 {
-			gpios = <&gpio1 RK_PB2 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio1 RK_PB2 GPIO_ACTIVE_LOW>;
 			label = "battery0";
 		};
 		led-1 {
-			gpios = <&gpio1 RK_PB4 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio1 RK_PB4 GPIO_ACTIVE_LOW>;
 			label = "battery1";
 		};
 		led-2 {
-			gpios = <&gpio1 RK_PB5 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio1 RK_PB5 GPIO_ACTIVE_LOW>;
 			label = "battery2";
 		};
 		led-3 {
-			gpios = <&gpio1 RK_PB6 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio1 RK_PB6 GPIO_ACTIVE_LOW>;
 			label = "battery3";
 		};
 		led-4 {
-			gpios = <&gpio1 RK_PB7 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio1 RK_PB7 GPIO_ACTIVE_LOW>;
 			label = "battery4";
 		};
 	};
