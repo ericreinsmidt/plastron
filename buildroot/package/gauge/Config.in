@@ -1,0 +1,6 @@
+config BR2_PACKAGE_GAUGE
+	bool "gauge"
+	help
+	  Shows the battery on the four lights on the side: a bar filling
+	  while charging, a red flash when the battery is low, and the level
+	  when asked (SIGUSR1). Started by init, with respawn.

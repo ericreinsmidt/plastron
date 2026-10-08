@@ -23,8 +23,9 @@ SOFTWARE.
 ---
 
 The license above covers plastron's own files: the build, its packages
-(splash, jackswitch, powerkey, mesa3d-px2), the init scripts, the scripts and
-the docs. Third-party files in this repository keep their own licenses:
+(splash, jackswitch, powerkey, usbrole, gauge, mesa3d-px2), the init scripts,
+the scripts and the docs. Third-party files in this repository keep their own
+licenses:
 
   buildroot/board/px2/patches/linux/
                    Patches to the Linux kernel, from ROCKNIX and from

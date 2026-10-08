@@ -67,6 +67,8 @@ BR2_PACKAGE_POWERKEY=y
 BR2_PACKAGE_JACKSWITCH=y
 # The USB port a host for a USB-C DAC, a device for a computer, by the ID pin
 BR2_PACKAGE_USBROLE=y
+# The battery on the four lights on the side
+BR2_PACKAGE_GAUGE=y
 
 # Sound: TortOS, diatom (through SDL2) and jackswitch talk to ALSA directly
 BR2_PACKAGE_ALSA_LIB=y
