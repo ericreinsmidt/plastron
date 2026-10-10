@@ -28,6 +28,8 @@ null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 
 ::respawn:/usr/sbin/jackswitch
 ::respawn:/usr/sbin/usbrole
+# The battery on the lights on the side
+::respawn:/usr/sbin/gauge
 
 # Busybox runs these before it kills the remaining processes, so stop them
 # here first: anything still holding a file open for writing (Mesa's shader
