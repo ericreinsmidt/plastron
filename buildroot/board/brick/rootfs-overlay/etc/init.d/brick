@@ -28,6 +28,12 @@ repair() {
 }
 
 start() {
+	# RCU grace periods expedited, as the kernel had them until now
+	# (RCU_EXPEDITE_BOOT): closing an input device waits for one, about
+	# 40 ms at the normal pace, and SDL's joystick setup closes each of the
+	# four in turn, 186 ms of TortOS's start where it is 17 ms expedited
+	# (measured 2026-10-12). Diatom does the same at every game.
+	echo 1 > /sys/kernel/rcu_expedited
 	watchdog -t 4 /dev/watchdog 2>/dev/null
 	mark init
 
