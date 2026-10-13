@@ -1,0 +1,161 @@
+#!/bin/sh
+# The Brick's start, from inittab's sysinit, after the mounts: the card, the
+# GPU, the pad, Diatom and TortOS, and the USB cable's network for bring-up.
+# The spike's rdinit as it was (carapace brick-spike/startup), less what an
+# initramfs needed: the libraries are in /usr/lib with real links, the GPU's
+# firmware and powervr.ini come with pvr-ge8300, the ALSA configuration with
+# the root. Each step's time since the kernel started goes to /tmp/boot-times.
+#
+# For now the kernel modules, the bring-up tools and TortOS itself still come
+# from the card's SPIKE partition (brick/ and TortOS/).
+
+SDCARD=/mnt/SDCARD
+B=$SDCARD/brick
+
+mark() { echo "$(cut -d' ' -f1 /proc/uptime) $1" >> /tmp/boot-times; }
+
+# A card partition that wasn't unmounted cleanly is checked and repaired before
+# it is mounted, as the Pixel's datapart does: Linux won't, and keeps the
+# flag for good once it has mounted a dirty volume, however cleanly it is
+# unmounted after. On FAT32 the flag is bit 0 of byte 65 of the boot sector,
+# so a clean boot pays for reading one byte.
+repair() {
+	state=$(od -An -tu1 -j65 -N1 $1)
+	[ $(( state & 1 )) -eq 0 ] && return
+	echo "brick: $1 was not unmounted cleanly; checking it" > /dev/kmsg
+	fsck.fat -a $1 > /dev/null 2>&1
+	echo "brick: fsck.fat finished with status $?" > /dev/kmsg
+}
+
+start() {
+	watchdog -t 4 /dev/watchdog 2>/dev/null
+	mark init
+
+	# The boot at full speed: the performance governor until TortOS has
+	# drawn its first frame, then ondemand, which otherwise starts at 408 MHz
+	# and is still ramping up while TortOS starts
+	G=/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+	(
+		for i in $(seq 1 200); do [ -w $G ] && break; sleep 0.01; done
+		echo performance > $G
+		for i in $(seq 1 300); do grep -q "first frame" /tmp/tortos.log 2>/dev/null && break; sleep 0.05; done
+		echo ondemand > $G
+		mark "governor: ondemand"
+	) &
+
+	# The card's SPIKE partition, by its GPT name
+	mkdir -p $SDCARD
+	for p in /sys/class/block/mmcblk0p*; do
+		grep -q "^PARTNAME=rootfs$" $p/uevent 2>/dev/null && dev=/dev/${p##*/}
+	done
+	dev=${dev:-/dev/mmcblk0p5}
+	repair $dev
+	mount -t vfat -o noatime $dev $SDCARD
+	mark card
+	# The time before the kernel, from the timer that counts from reset
+	[ -x $B/bin/sincereset ] && $B/bin/sincereset >> /tmp/boot-times
+
+	# The GPU's own driver now; its display half (dc_sunxi) after the pad,
+	# as it waits for the panel to finish powering up (about 0.85 s)
+	insmod $B/gpu/pvrsrvkm.ko
+	mark gpu
+	# The pad, after the volume keys, power key and jack, which keep event0-2
+	insmod $B/modules/brick-pad.ko
+	mark pad
+	insmod $B/gpu/dc_sunxi.ko
+	mark "gpu display"
+
+	start_tortos
+	mark tortos
+	start_usb
+	mark usb
+}
+
+# Diatom, then TortOS again whenever it ends, as launch.sh does, until it asks
+# for the power to go off (Auto Off, or the power key)
+start_tortos() {
+	export TORTOS_DIR=$SDCARD/TortOS PLATFORM=tg3040 DEVICE=brick SDCARD_PATH=$SDCARD
+	export BIOS_PATH=$SDCARD/Bios ROMS_PATH=$SDCARD/Roms SAVES_PATH=$SDCARD/Saves CHEATS_PATH=$SDCARD/Cheats
+	export SYSTEM_PATH=$TORTOS_DIR CORES_PATH=$TORTOS_DIR/cores
+	export USERDATA_PATH=$SDCARD/.userdata/tg3040 SHARED_USERDATA_PATH=$SDCARD/.userdata/shared
+	export LOGS_PATH=$USERDATA_PATH/logs HOME=$USERDATA_PATH
+	export SDL_VIDEODRIVER=pvrfb SDL_RENDER_DRIVER=opengles2
+	export TORTOS_DIATOM_SOCKET=/tmp/diatom.sock
+	mkdir -p $LOGS_PATH $SHARED_USERDATA_PATH
+	cd $TORTOS_DIR
+	./diatom --socket $TORTOS_DIATOM_SOCKET --cores $CORES_PATH \
+		--save $SAVES_PATH --system $BIOS_PATH > /tmp/diatom.log 2>&1 &
+	(
+		while true; do
+			rm -f /tmp/tortos_poweroff
+			$B/bin/backlight on
+			./tortos.elf >> /tmp/tortos.log 2>&1
+			[ -f /tmp/tortos_poweroff ] && break
+			sleep 0.5
+		done
+		poweroff
+	) &
+	echo $! > /tmp/tortos-loop.pid
+	cd /
+}
+
+# USB for bring-up: a network link on the cable, the Brick at 10.55.0.2 and
+# the computer on the other end given 10.55.0.1, with no router, so its own
+# internet is untouched. A shell over telnet, and over nc on 2323 in case
+# telnetd dies. Never in a release: neither asks for a password.
+start_usb() {
+	for i in $(seq 1 150); do [ -n "$(ls /sys/class/udc 2>/dev/null)" ] && break; sleep 0.1; done
+	udc=$(ls /sys/class/udc 2>/dev/null | head -1)
+	mount -t configfs configfs /sys/kernel/config
+	g=/sys/kernel/config/usb_gadget/brick
+	mkdir -p $g/strings/0x409 $g/configs/c.1/strings/0x409
+	echo 0x1d6b > $g/idVendor; echo 0x0104 > $g/idProduct
+	echo plastron > $g/strings/0x409/manufacturer
+	echo "Brick bring-up" > $g/strings/0x409/product
+	echo brick0001 > $g/strings/0x409/serialnumber
+	echo "bring-up" > $g/configs/c.1/strings/0x409/configuration
+	mkdir -p $g/functions/ecm.usb0
+	echo 02:62:72:69:63:01 > $g/functions/ecm.usb0/dev_addr
+	echo 02:62:72:69:63:02 > $g/functions/ecm.usb0/host_addr
+	ln -s $g/functions/ecm.usb0 $g/configs/c.1/
+	if [ -n "$udc" ] && echo "$udc" > $g/UDC 2>/dev/null; then
+		ifconfig usb0 10.55.0.2 netmask 255.255.255.0 up
+		: > /tmp/udhcpd.leases
+		udhcpd /etc/udhcpd.conf
+		telnetd -F -l /bin/sh -b 10.55.0.2 > /tmp/telnetd.log 2>&1 &
+		( while true; do nc -l -p 2323 -s 10.55.0.2 -e /bin/sh; sleep 0.2; done ) > /tmp/nc.log 2>&1 &
+	else
+		mark "usb: network didn't bind"
+	fi
+}
+
+# TortOS and Diatom ahead of everything else at shutdown: the loop first, or
+# it starts TortOS again
+stop() {
+	[ -f /tmp/tortos-loop.pid ] && kill $(cat /tmp/tortos-loop.pid) 2>/dev/null
+	killall -TERM tortos.elf muse diatom 2>/dev/null
+	for i in $(seq 1 20); do pidof diatom >/dev/null || break; sleep 0.1; done
+}
+
+# The card, waiting for the programs that ran from it to go, as the Pixel's
+# datapart does: unmounted at once, it was often still busy, and every next
+# boot found it marked as not properly unmounted
+unmount() {
+	grep -q " $SDCARD " /proc/mounts || return 0
+	n=0
+	until umount $SDCARD 2>/dev/null; do
+		n=$((n + 1))
+		if [ $n -ge 60 ]; then
+			echo "brick: $SDCARD still in use after 3 s, left for the next boot to check" > /dev/kmsg
+			return 1
+		fi
+		usleep 50000
+	done
+}
+
+case "$1" in
+start) start ;;
+stop) stop ;;
+unmount) unmount ;;
+*) echo "usage: $0 start|stop|unmount" >&2; exit 1 ;;
+esac

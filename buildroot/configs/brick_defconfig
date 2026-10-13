@@ -23,8 +23,12 @@ BR2_TARGET_GENERIC_HOSTNAME="brick"
 BR2_TARGET_GENERIC_ISSUE="brick"
 BR2_INIT_BUSYBOX=y
 BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_DEVTMPFS=y
+# No getty: see board/brick/rootfs-overlay/etc/inittab
 # BR2_TARGET_GENERIC_GETTY is not set
 BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL_PX2_PATH)/board/brick/patches"
+BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_PX2_PATH)/board/brick/rootfs-overlay"
+# telnetd, udhcpd and nc for the USB link while bringing it up: see the fragment
+BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_PX2_PATH)/board/brick/busybox.fragment"
 
 # Graphics: Imagination's GLES and EGL, and SDL2 drawing to the framebuffer
 # through them (the pvrfb video driver, see external.mk)
@@ -51,3 +55,22 @@ BR2_PACKAGE_FFMPEG_SWSCALE=y
 # own repositories
 BR2_PACKAGE_TORTOS=y
 BR2_PACKAGE_DIATOM=y
+
+# sfdisk and partx, to add the root partition to a card from the Brick itself
+BR2_PACKAGE_UTIL_LINUX=y
+BR2_PACKAGE_UTIL_LINUX_BINARIES=y
+BR2_PACKAGE_UTIL_LINUX_PARTX=y
+# fsck.fat, for the card's SPIKE partition after a power-off that left it
+# dirty (/etc/init.d/brick)
+BR2_PACKAGE_DOSFSTOOLS=y
+BR2_PACKAGE_DOSFSTOOLS_FSCK_FAT=y
+
+# The root: ext4, in the card's partition named plastron-root, which the
+# spike's initramfs (carapace brick-spike/startup/rootswitch.c) mounts. Not
+# orphan_file, which mke2fs turns on and the 4.9 kernel can only mount
+# read-only.
+BR2_TARGET_ROOTFS_EXT2=y
+BR2_TARGET_ROOTFS_EXT2_4=y
+BR2_TARGET_ROOTFS_EXT2_SIZE="256M"
+BR2_TARGET_ROOTFS_EXT2_MKFS_OPTIONS="-O ^64bit,^orphan_file"
+# BR2_TARGET_ROOTFS_TAR is not set

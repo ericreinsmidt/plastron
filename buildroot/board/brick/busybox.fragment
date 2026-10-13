@@ -1,0 +1,21 @@
+# Changes to Buildroot's BusyBox config (package/busybox/busybox.config) for
+# the Brick.
+#
+# No system logger, kernel logger or cron, as on the Pixel.
+# CONFIG_SYSLOGD is not set
+# CONFIG_KLOGD is not set
+# CONFIG_CROND is not set
+
+# The USB cable's network while the Brick is being brought up: a DHCP server
+# for the computer on the other end, telnet for a shell, and nc for sending
+# files and a spare shell (/etc/init.d/brick)
+CONFIG_UDHCPD=y
+CONFIG_DHCPD_LEASES_FILE="/tmp/udhcpd.leases"
+CONFIG_TELNETD=y
+CONFIG_FEATURE_TELNETD_STANDALONE=y
+CONFIG_NC=y
+CONFIG_NC_SERVER=y
+CONFIG_NC_EXTRA=y
+
+# tar's -z, as on the Pixel
+CONFIG_FEATURE_SEAMLESS_GZ=y
