@@ -21,7 +21,14 @@
  * instead, the turtle stayed under TortOS's first frames as they faded in,
  * as TortOS draws them over what its buffer held (tried 2026-10-13). A move
  * after that is TortOS's first frame, and this stops at once. So TortOS needs
- * to know nothing about it. If the animation finishes first, the wordmark stays.
+ * to know nothing about it.
+ *
+ * EGL's setup clears the framebuffer's pages, this one too, so after each
+ * frame the page is spot-checked against the frame and written again whole if
+ * anything is gone (copying only each frame's band, the wordmark was wiped
+ * and never came back). When the animation is over it holds the last frame
+ * the same way, putting back EGL's pan if that comes later, until TortOS
+ * draws, or 15 s.
  *
  * Started first thing by /etc/init.d/brick; the framebuffer is there long
  * before the panel lights, so the first frame is waiting when it does.
@@ -121,6 +128,17 @@ static int frame_decode(unsigned n, uint8_t *pixels, unsigned *first, unsigned *
 	return 0;
 }
 
+/* The page still shows the frame: 64 pixels spread over it compared */
+static int page_intact(const uint32_t *page, const uint32_t *pixels, size_t words)
+{
+	for (size_t i = 0; i < 64; i++) {
+		size_t at = i * (words / 64) + (i * 7919) % (words / 64);
+
+		if (page[at] != pixels[at]) return 0;
+	}
+	return 1;
+}
+
 /* Where the screen is panned to now */
 static uint32_t pan_now(int fd)
 {
@@ -207,7 +225,7 @@ int main(void)
 		return 1;
 	}
 	double first = since_boot();
-	char line[128];
+	char line[256];
 	snprintf(line, sizeof(line), "splash: first frame at %.3f s\n", first);
 	log_to_kernel(line);
 
@@ -219,7 +237,7 @@ int main(void)
 	 * 3 ms) stays ahead of the scan down the panel (16 ms), so it doesn't
 	 * tear.
 	 */
-	unsigned shown = 0;
+	unsigned shown = 0, repaired = 0;
 	int stopped = 0, took_back = 0;
 	for (unsigned n = 1; n < frame_count && !stopped; n++) {
 		double due = first + (double)n / fps;
@@ -246,11 +264,31 @@ int main(void)
 		memcpy(page + (size_t)first_row * fix.line_length,
 		       (uint8_t *)pixels + (size_t)first_row * fix.line_length,
 		       (size_t)rows * fix.line_length);
+		if (!page_intact((uint32_t *)page, pixels, size / 4)) {
+			memcpy(page, pixels, size);
+			repaired++;
+		}
 		shown = n;
 	}
-	snprintf(line, sizeof(line), "splash: %s at frame %u of %u, %.3f s%s\n",
-		 stopped ? "stopped for TortOS" : "finished", shown, frame_count, since_boot(),
-		 took_back ? " (after putting EGL's first pan back)" : "");
+
+	/* The last frame held until TortOS draws */
+	double give_up = since_boot() + 15;
+	while (!stopped && since_boot() < give_up) {
+		struct timespec t = { 0, 8000000 };
+
+		if (!still_ours(fd, yoffset, &took_back)) {
+			stopped = 1;
+			break;
+		}
+		if (!page_intact((uint32_t *)page, pixels, size / 4)) {
+			memcpy(page, pixels, size);
+			repaired++;
+		}
+		nanosleep(&t, NULL);
+	}
+	snprintf(line, sizeof(line), "splash: %s at frame %u of %u, %.3f s%s, page rewritten %u times\n",
+		 stopped ? "TortOS took over" : "gave up waiting for TortOS", shown, frame_count, since_boot(),
+		 took_back ? " (after putting EGL's first pan back)" : "", repaired);
 	log_to_kernel(line);
 	/* The picture stays in the framebuffer's memory without this process */
 	return 0;
