@@ -8,11 +8,14 @@ BUILDROOT_VERSION=2026.02.3
 BUILDROOT=/work/buildroot-$BUILDROOT_VERSION
 # FLAVOR=tortos (the default) is the base system with TortOS on top;
 # FLAVOR=base is the base system alone. Separate outputs, so switching
-# never leaves one's files in the other.
+# never leaves one's files in the other. FLAVOR=brick is the TrimUI Brick's
+# system, its own defconfig with its own toolchain.
 FLAVOR=${FLAVOR:-tortos}
+DEFCONFIG=px2_defconfig
 case $FLAVOR in
 tortos) OUTPUT=/work/output ;;
 base) OUTPUT=/work/output-base ;;
+brick) OUTPUT=/work/output-brick DEFCONFIG=brick_defconfig ;;
 *) echo "unknown FLAVOR $FLAVOR" >&2; exit 1 ;;
 esac
 
@@ -23,7 +26,7 @@ if [ ! -d "$BUILDROOT" ]; then
 	tar -C /work -xf "$tarball"
 fi
 
-make -C "$BUILDROOT" O="$OUTPUT" BR2_EXTERNAL=/src/buildroot BR2_DL_DIR=/work/dl px2_defconfig
+make -C "$BUILDROOT" O="$OUTPUT" BR2_EXTERNAL=/src/buildroot BR2_DL_DIR=/work/dl $DEFCONFIG
 if [ "$FLAVOR" = tortos ]; then
 	"$BUILDROOT/support/kconfig/merge_config.sh" -m -O "$OUTPUT" \
 		"$OUTPUT/.config" /src/buildroot/board/tortos/tortos.config >/dev/null

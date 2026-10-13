@@ -32,7 +32,11 @@ TORTOS_OVERRIDE_SRCDIR_RSYNC_EXCLUSIONS = \
 # came along and make took its muse as up to date. The Brick's binary shipped
 # as the Pixel's, caught 2026-10-01 by its size. The copy leaves build/ behind
 # now (above), and a directory of its own makes sure of it.
-TORTOS_BUILD_DIR = build-pixel2
+TORTOS_BUILD_DIR = build-$(TORTOS_DEVICE)
+#
+# The Brick's system is the one with the Brick's GPU libraries: TortOS's
+# Brick device file (src/device/brick.c) then, into build-brick/.
+TORTOS_DEVICE = $(if $(BR2_PACKAGE_PVR_GE8300),brick,pixel2)
 #
 # The ScreenScraper pair comes from the file the Makefile mounts, read here
 # in the shell so neither value is written into a command line make prints.
@@ -47,7 +51,7 @@ define TORTOS_BUILD_CMDS
 	SS_DEVPASS="$$(sed -n 's/^SS_DEVPASS=//p' $(TORTOS_SS_ENV) 2>/dev/null | head -1)" \
 		$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) -f mk/cross.mk BUILD=$(TORTOS_BUILD_DIR) creds
 	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) -f mk/cross.mk \
-		CC="$(TARGET_CC)" SYSROOT="$(STAGING_DIR)" DEVICE=pixel2 \
+		CC="$(TARGET_CC)" SYSROOT="$(STAGING_DIR)" DEVICE=$(TORTOS_DEVICE) \
 		BUILD=$(TORTOS_BUILD_DIR) VERSION="$(TORTOS_VERSION_NUMBER)" \
 		$(TORTOS_BUILD_DIR)/tortos.elf $(TORTOS_BUILD_DIR)/muse
 endef
@@ -61,6 +65,19 @@ endef
 # one: the version goes in as TortOS/VERSION, which the payload writes only
 # when it is given one (it was never passed before 2026-10-06).
 TORTOS_CARD = $(TARGET_DIR)/usr/share/tortos/card
+ifeq ($(TORTOS_DEVICE),brick)
+# For now the Brick's TortOS still comes from its own release on the card,
+# and only these two are swapped in from here; the payload, and TortOS
+# installed by the image as on the Pixel, come with the Brick's own image
+define TORTOS_INSTALL_TARGET_CMDS
+	$(INSTALL) -D -m 0755 $(@D)/$(TORTOS_BUILD_DIR)/tortos.elf \
+		$(TARGET_DIR)/usr/share/tortos/brick/tortos.elf
+	$(INSTALL) -D -m 0755 $(@D)/$(TORTOS_BUILD_DIR)/muse \
+		$(TARGET_DIR)/usr/share/tortos/brick/muse
+	$(INSTALL) -D -m 0755 $(DIATOM_DIR)/build/brick/diatom \
+		$(TARGET_DIR)/usr/share/tortos/brick/diatom
+endef
+else
 define TORTOS_INSTALL_TARGET_CMDS
 	DEVICE=pixel2 OUT=$(TORTOS_CARD) ZIP= VERSION="$(TORTOS_VERSION_NUMBER)" \
 		TORTOS_ELF=$(@D)/$(TORTOS_BUILD_DIR)/tortos.elf \
@@ -69,5 +86,6 @@ define TORTOS_INSTALL_TARGET_CMDS
 		VENDOR_DIR=/tortos-vendor \
 		sh $(@D)/mk/payload.sh
 endef
+endif
 
 $(eval $(generic-package))

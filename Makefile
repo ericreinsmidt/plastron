@@ -23,7 +23,7 @@ SOURCES := -v $(TORTOS_SRC):/tortos:ro -v $(DIATOM_SRC):/diatom:ro -v $(TORTOS_V
 	$(if $(wildcard $(TORTOS_SS_ENV)),-v $(TORTOS_SS_ENV):/tortos-ss.env:ro)
 DOCKER_RUN := docker run --rm -t -v $(CURDIR):/src:ro $(SOURCES) -v $(VOLUME):/work $(IMAGE)
 
-.PHONY: all builder volume image base bootloader shell linux-rebuild copy-out clean-output release
+.PHONY: all builder volume image base brick bootloader shell linux-rebuild copy-out clean-output release
 
 all: image
 
@@ -42,6 +42,16 @@ image: builder volume
 base: builder volume
 	docker run --rm -t -e FLAVOR=base -v $(CURDIR):/src:ro $(SOURCES) -v $(VOLUME):/work $(IMAGE) sh /src/scripts/build.sh
 	$(MAKE) copy-out OUTPUT=output-base CARD=sdcard-base.img
+
+# The TrimUI Brick's system (configs/brick_defconfig), in output-brick.
+# Imagination's GPU libraries for it are closed and never committed: they
+# come from BRICK_GPU, the userspace half of DDK 1.11@5516664 from the Sonic
+# Pad SDK (lib64/ and include/), mounted at /brick-gpu.
+BRICK_GPU ?= $(HOME)/brick-runtime/gpu-ddk-1.11
+brick: builder volume
+	@[ -d "$(BRICK_GPU)/lib64" ] || { echo "no GPU libraries in $(BRICK_GPU)" >&2; exit 1; }
+	docker run --rm -t -e FLAVOR=brick -v $(CURDIR):/src:ro $(SOURCES) \
+		-v $(BRICK_GPU):/brick-gpu:ro -v $(VOLUME):/work $(IMAGE) sh /src/scripts/build.sh $(BRICK_TARGET)
 
 # U-Boot, packed into buildroot/board/px2/bootloader/u-boot-px2.bin. Rarely
 # needed: the result is committed, and `make` only uses it.

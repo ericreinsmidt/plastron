@@ -1,0 +1,9 @@
+prefix=/usr
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: egl
+Description: Imagination's EGL for the PowerVR GE8300
+Version: 1.11.5516664
+Libs: -L${libdir} -lEGL
+Cflags: -I${includedir}

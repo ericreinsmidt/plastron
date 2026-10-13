@@ -1,0 +1,53 @@
+# TrimUI Brick (Allwinner A133P): the libraries and programs for our own
+# system on the Brick, built from source, all but Imagination's GPU
+# libraries (package/pvr-ge8300). The kernel and boot loader are built on
+# their own for now, in carapace and scute.
+
+# CPU and toolchain. glibc, as on the Pixel, so prebuilt libretro cores and
+# the GPU libraries run.
+BR2_aarch64=y
+BR2_cortex_a53=y
+BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
+BR2_TOOLCHAIN_BUILDROOT_CXX=y
+BR2_GCC_VERSION_15_X=y
+# The headers of the kernel it runs on, Allwinner's 4.9: glibc refuses to
+# start on a kernel older than the headers it was built with
+BR2_KERNEL_HEADERS_VERSION=y
+BR2_DEFAULT_KERNEL_VERSION="4.9.337"
+BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_4_9=y
+# 4.9 predates the kernel's LICENSES folder: its license is COPYING alone
+BR2_PACKAGE_HOST_LINUX_HEADERS_LICENSE_FILES="COPYING"
+
+# System: busybox init, devtmpfs, no udev
+BR2_TARGET_GENERIC_HOSTNAME="brick"
+BR2_TARGET_GENERIC_ISSUE="brick"
+BR2_INIT_BUSYBOX=y
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_DEVTMPFS=y
+# BR2_TARGET_GENERIC_GETTY is not set
+BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL_PX2_PATH)/board/brick/patches"
+
+# Graphics: Imagination's GLES and EGL, and SDL2 drawing to the framebuffer
+# through them (the pvrfb video driver, see external.mk)
+BR2_PACKAGE_PVR_GE8300=y
+BR2_PACKAGE_SDL2=y
+BR2_PACKAGE_SDL2_OPENGLES=y
+
+# Sound: TortOS, Muse and diatom (through SDL2) talk to ALSA directly
+BR2_PACKAGE_ALSA_LIB=y
+
+# Libraries TortOS and Diatom load, as on the Pixel: SDL2_image with PNG and
+# JPEG, SDL2_ttf, sqlite, zlib, FFmpeg for Muse
+BR2_PACKAGE_SDL2_IMAGE=y
+BR2_PACKAGE_LIBPNG=y
+BR2_PACKAGE_JPEG=y
+BR2_PACKAGE_SDL2_TTF=y
+BR2_PACKAGE_SQLITE=y
+BR2_PACKAGE_ZLIB=y
+BR2_PACKAGE_FFMPEG=y
+BR2_PACKAGE_FFMPEG_SWSCALE=y
+# BR2_PACKAGE_FFMPEG_FFMPEG is not set
+
+# TortOS (the launcher and Muse) and Diatom, built for the Brick from their
+# own repositories
+BR2_PACKAGE_TORTOS=y
+BR2_PACKAGE_DIATOM=y

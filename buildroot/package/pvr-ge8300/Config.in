@@ -1,0 +1,27 @@
+config BR2_PACKAGE_PVR_GE8300
+	bool "pvr-ge8300"
+	depends on BR2_aarch64
+	depends on BR2_TOOLCHAIN_USES_GLIBC
+	select BR2_PACKAGE_HAS_LIBEGL
+	select BR2_PACKAGE_HAS_LIBGLES
+	help
+	  Imagination's OpenGL ES and EGL for the PowerVR GE8300 in the
+	  TrimUI Brick's Allwinner A133P: the userspace half of DDK
+	  1.11@5516664, the version the kernel's GPU driver is built
+	  from, with the null window system that draws to the Linux
+	  framebuffer, and the GPU's firmware.
+
+	  Closed binaries, from Allwinner's SDK as Creality published it
+	  (the Sonic Pad SDK's package/libs/libgpu/ge8300/fbdev/glibc).
+	  They are never committed: the build takes them from a folder
+	  mounted at /brick-gpu (see the Makefile).
+
+if BR2_PACKAGE_PVR_GE8300
+
+config BR2_PACKAGE_PROVIDES_LIBEGL
+	default "pvr-ge8300"
+
+config BR2_PACKAGE_PROVIDES_LIBGLES
+	default "pvr-ge8300"
+
+endif

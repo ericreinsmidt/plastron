@@ -11,3 +11,9 @@ define PX2_LINUX_ADD_DTS
 		echo 'dtb-$$(CONFIG_ARCH_ROCKCHIP) += rk3326s-gkd-pixel2.dtb' >> $(@D)/arch/arm64/boot/dts/rockchip/Makefile
 endef
 LINUX_PRE_BUILD_HOOKS += PX2_LINUX_ADD_DTS
+
+# The Brick's SDL2 draws through Imagination's EGL on the framebuffer, with
+# the video driver board/brick/patches/sdl2 adds (it is off unless asked for)
+ifeq ($(BR2_PACKAGE_PVR_GE8300),y)
+SDL2_CONF_OPTS += --enable-video-pvrfb
+endif

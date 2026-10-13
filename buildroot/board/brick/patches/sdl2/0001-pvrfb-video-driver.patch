@@ -1,0 +1,396 @@
+SDL2: a video driver for PowerVR GPUs on the Linux framebuffer
+
+Imagination's EGL with its null window system (libpvrNULL_WSEGL), as the
+TrimUI Brick's GE8300 runs it: one display, the framebuffer's size and
+format, every window full screen, the EGL surface on native window 0, input
+from the Linux input devices. Off unless asked for, with
+--enable-video-pvrfb (autotools) or SDL_PVRFB (CMake).
+
+diff -ruN a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -484,6 +484,7 @@
+ set_option(SDL_RENDER_D3D          "Enable the Direct3D render driver" ${WINDOWS})
+ set_option(SDL_RENDER_METAL        "Enable the Metal render driver" ${APPLE})
+ set_option(SDL_VIVANTE             "Use Vivante EGL video driver" ${UNIX_SYS})
++set_option(SDL_PVRFB               "Use the PowerVR framebuffer (null window system) EGL video driver" OFF)
+ dep_option(SDL_VULKAN              "Enable Vulkan support" ON "ANDROID OR APPLE OR LINUX OR WINDOWS" OFF)
+ set_option(SDL_METAL               "Enable Metal support" ${APPLE})
+ set_option(SDL_KMSDRM              "Use KMS DRM video driver" ${UNIX_SYS})
+@@ -1521,6 +1522,13 @@
+     CheckOpenGLES()
+     CheckWayland()
+     CheckVivante()
++    if(SDL_PVRFB)
++      file(GLOB PVRFB_SOURCES ${SDL2_SOURCE_DIR}/src/video/pvrfb/*.c)
++      list(APPEND SOURCE_FILES ${PVRFB_SOURCES})
++      set(SDL_VIDEO_DRIVER_PVRFB 1)
++      set(HAVE_PVRFB TRUE)
++      set(HAVE_SDL_VIDEO TRUE)
++    endif()
+     # FIXME: implement CheckVulkan()
+     if(SDL_VULKAN)
+       set(SDL_VIDEO_VULKAN 1)
+diff -ruN a/configure b/configure
+--- a/configure
++++ b/configure
+@@ -924,6 +924,7 @@
+ enable_video_x11_scrnsaver
+ enable_video_x11_xshape
+ enable_video_vivante
++enable_video_pvrfb
+ enable_video_cocoa
+ enable_video_metal
+ enable_render_metal
+@@ -1741,6 +1742,8 @@
+   --enable-video-x11-xshape
+                           enable X11 XShape support [default=yes]
+   --enable-video-vivante  use Vivante EGL video driver [default=yes]
++  --enable-video-pvrfb    use the PowerVR framebuffer (null window system) EGL
++                          video driver [default=no]
+   --enable-video-cocoa    use Cocoa video driver [default=yes]
+   --enable-video-metal    include Metal support [default=yes]
+   --enable-render-metal   enable the Metal render driver [default=yes]
+@@ -25428,6 +25431,26 @@
+     fi
+ }
+ 
++CheckPVRFBVideo()
++{
++    # Check whether --enable-video-pvrfb was given.
++if test ${enable_video_pvrfb+y}
++then :
++  enableval=$enable_video_pvrfb;
++else $as_nop
++  enable_video_pvrfb=no
++fi
++
++    if test x$enable_video = xyes -a x$enable_video_pvrfb = xyes -a x$video_opengl_egl = xyes; then
++
++printf "%s\n" "#define SDL_VIDEO_DRIVER_PVRFB 1" >>confdefs.h
++
++        SOURCES="$SOURCES $srcdir/src/video/pvrfb/*.c"
++        SUMMARY_video="${SUMMARY_video} pvrfb"
++        have_video=yes
++    fi
++}
++
+ CheckHaikuVideo()
+ {
+     if test x$enable_video = xyes; then
+@@ -28732,6 +28755,7 @@
+         CheckLinuxVersion
+         CheckRPATH
+         CheckVivanteVideo
++        CheckPVRFBVideo
+ 
+         # Set up files for the misc library
+         if test x$enable_misc = xyes; then
+diff -ruN a/configure.ac b/configure.ac
+--- a/configure.ac
++++ b/configure.ac
+@@ -2273,6 +2273,20 @@
+     fi
+ }
+ 
++dnl Set up the PowerVR framebuffer video driver if enabled
++CheckPVRFBVideo()
++{
++    AC_ARG_ENABLE(video-pvrfb,
++[AS_HELP_STRING([--enable-video-pvrfb], [use the PowerVR framebuffer (null window system) EGL video driver [default=no]])],
++                  , enable_video_pvrfb=no)
++    if test x$enable_video = xyes -a x$enable_video_pvrfb = xyes -a x$video_opengl_egl = xyes; then
++        AC_DEFINE(SDL_VIDEO_DRIVER_PVRFB, 1, [ ])
++        SOURCES="$SOURCES $srcdir/src/video/pvrfb/*.c"
++        SUMMARY_video="${SUMMARY_video} pvrfb"
++        have_video=yes
++    fi
++}
++
+ dnl Set up the Haiku video driver if enabled
+ CheckHaikuVideo()
+ {
+@@ -3853,6 +3867,7 @@
+         CheckLinuxVersion
+         CheckRPATH
+         CheckVivanteVideo
++        CheckPVRFBVideo
+ 
+         # Set up files for the misc library
+         if test x$enable_misc = xyes; then
+diff -ruN a/include/SDL_config.h.cmake b/include/SDL_config.h.cmake
+--- a/include/SDL_config.h.cmake
++++ b/include/SDL_config.h.cmake
+@@ -418,6 +418,7 @@
+ #cmakedefine SDL_VIDEO_DRIVER_WAYLAND @SDL_VIDEO_DRIVER_WAYLAND@
+ #cmakedefine SDL_VIDEO_DRIVER_RPI @SDL_VIDEO_DRIVER_RPI@
+ #cmakedefine SDL_VIDEO_DRIVER_VIVANTE @SDL_VIDEO_DRIVER_VIVANTE@
++#cmakedefine SDL_VIDEO_DRIVER_PVRFB @SDL_VIDEO_DRIVER_PVRFB@
+ #cmakedefine SDL_VIDEO_DRIVER_VIVANTE_VDK @SDL_VIDEO_DRIVER_VIVANTE_VDK@
+ #cmakedefine SDL_VIDEO_DRIVER_OS2 @SDL_VIDEO_DRIVER_OS2@
+ #cmakedefine SDL_VIDEO_DRIVER_QNX @SDL_VIDEO_DRIVER_QNX@
+diff -ruN a/include/SDL_config.h.in b/include/SDL_config.h.in
+--- a/include/SDL_config.h.in
++++ b/include/SDL_config.h.in
+@@ -412,6 +412,7 @@
+ #undef SDL_VIDEO_DRIVER_X11_HAS_XKBKEYCODETOKEYSYM
+ #undef SDL_VIDEO_DRIVER_NACL
+ #undef SDL_VIDEO_DRIVER_VIVANTE
++#undef SDL_VIDEO_DRIVER_PVRFB
+ #undef SDL_VIDEO_DRIVER_VIVANTE_VDK
+ #undef SDL_VIDEO_DRIVER_OS2
+ #undef SDL_VIDEO_DRIVER_QNX
+diff -ruN a/src/video/SDL_sysvideo.h b/src/video/SDL_sysvideo.h
+--- a/src/video/SDL_sysvideo.h
++++ b/src/video/SDL_sysvideo.h
+@@ -478,6 +478,7 @@
+ extern VideoBootStrap Wayland_bootstrap;
+ extern VideoBootStrap NACL_bootstrap;
+ extern VideoBootStrap VIVANTE_bootstrap;
++extern VideoBootStrap PVRFB_bootstrap;
+ extern VideoBootStrap Emscripten_bootstrap;
+ extern VideoBootStrap QNX_bootstrap;
+ extern VideoBootStrap OFFSCREEN_bootstrap;
+diff -ruN a/src/video/SDL_video.c b/src/video/SDL_video.c
+--- a/src/video/SDL_video.c
++++ b/src/video/SDL_video.c
+@@ -81,6 +81,9 @@
+ #ifdef SDL_VIDEO_DRIVER_WAYLAND
+     &Wayland_bootstrap,
+ #endif
++#ifdef SDL_VIDEO_DRIVER_PVRFB
++    &PVRFB_bootstrap,
++#endif
+ #ifdef SDL_VIDEO_DRIVER_VIVANTE
+     &VIVANTE_bootstrap,
+ #endif
+diff -ruN a/src/video/pvrfb/SDL_pvrfbvideo.c b/src/video/pvrfb/SDL_pvrfbvideo.c
+--- a/src/video/pvrfb/SDL_pvrfbvideo.c
++++ b/src/video/pvrfb/SDL_pvrfbvideo.c
+@@ -0,0 +1,197 @@
++/*
++  PowerVR on the Linux framebuffer: SDL video for Imagination's EGL with the
++  null window system (libpvrNULL_WSEGL), as on the TrimUI Brick's GE8300.
++
++  One display, the framebuffer's size and format; every window fills it, as
++  there is nothing to place a window on; the EGL surface is made with native
++  window 0, which the null window system takes as the display itself. Input
++  comes from the Linux input devices.
++*/
++#include "../../SDL_internal.h"
++
++#ifdef SDL_VIDEO_DRIVER_PVRFB
++
++#include <fcntl.h>
++#include <linux/fb.h>
++#include <sys/ioctl.h>
++#include <unistd.h>
++
++#include "../SDL_sysvideo.h"
++#include "../../events/SDL_events_c.h"
++#ifdef SDL_INPUT_LINUXEV
++#include "../../core/linux/SDL_evdev.h"
++#endif
++#include "SDL_pvrfbvideo.h"
++
++static int PVRFB_VideoInit(_THIS)
++{
++    SDL_DisplayData *data;
++    SDL_VideoDisplay display;
++    SDL_DisplayMode mode;
++    struct fb_var_screeninfo info;
++    int fd = open("/dev/fb0", O_RDONLY | O_CLOEXEC);
++
++    if (fd < 0) {
++        return SDL_SetError("pvrfb: can't open /dev/fb0");
++    }
++    if (ioctl(fd, FBIOGET_VSCREENINFO, &info) < 0) {
++        close(fd);
++        return SDL_SetError("pvrfb: can't read the framebuffer's mode");
++    }
++    close(fd);
++
++    data = (SDL_DisplayData *)SDL_calloc(1, sizeof(*data));
++    if (!data) {
++        return SDL_OutOfMemory();
++    }
++    data->width = info.xres;
++    data->height = info.yres;
++    data->bpp = info.bits_per_pixel;
++
++    SDL_zero(mode);
++    mode.w = data->width;
++    mode.h = data->height;
++    mode.format = data->bpp == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_ARGB8888;
++    mode.refresh_rate = 60;
++
++    SDL_zero(display);
++    display.name = "PowerVR framebuffer";
++    display.desktop_mode = mode;
++    display.current_mode = mode;
++    display.driverdata = data;
++    if (SDL_AddVideoDisplay(&display, SDL_FALSE) < 0) {
++        return -1;
++    }
++#ifdef SDL_INPUT_LINUXEV
++    if (SDL_EVDEV_Init() < 0) {
++        return -1;
++    }
++#endif
++    return 0;
++}
++
++static void PVRFB_VideoQuit(_THIS)
++{
++#ifdef SDL_INPUT_LINUXEV
++    SDL_EVDEV_Quit();
++#endif
++}
++
++static void PVRFB_GetDisplayModes(_THIS, SDL_VideoDisplay *display)
++{
++    SDL_AddDisplayMode(display, &display->current_mode);
++}
++
++static int PVRFB_SetDisplayMode(_THIS, SDL_VideoDisplay *display, SDL_DisplayMode *mode)
++{
++    return 0;
++}
++
++static int PVRFB_CreateWindow(_THIS, SDL_Window *window)
++{
++    SDL_DisplayData *display = SDL_GetDisplayDriverData(0);
++    SDL_WindowData *data = (SDL_WindowData *)SDL_calloc(1, sizeof(*data));
++
++    if (!data) {
++        return SDL_OutOfMemory();
++    }
++    window->driverdata = data;
++
++    /* The whole screen, whatever was asked for */
++    window->x = window->y = 0;
++    window->w = window->windowed.w = display->width;
++    window->h = window->windowed.h = display->height;
++    window->flags |= SDL_WINDOW_FULLSCREEN;
++
++    /* The EGL surface is made with the first GL context, not here: by then
++     * SDL has settled the GL attributes, which a renderer may still change
++     * after the window is made */
++    data->egl_surface = EGL_NO_SURFACE;
++    SDL_SetMouseFocus(window);
++    SDL_SetKeyboardFocus(window);
++    return 0;
++}
++
++static void PVRFB_DestroyWindow(_THIS, SDL_Window *window)
++{
++    SDL_WindowData *data = window->driverdata;
++
++    if (data) {
++        if (data->egl_surface != EGL_NO_SURFACE) {
++            SDL_EGL_DestroySurface(_this, data->egl_surface);
++        }
++        SDL_free(data);
++    }
++    window->driverdata = NULL;
++}
++
++static void PVRFB_PumpEvents(_THIS)
++{
++#ifdef SDL_INPUT_LINUXEV
++    SDL_EVDEV_Poll();
++#endif
++}
++
++static int PVRFB_GLES_LoadLibrary(_THIS, const char *path)
++{
++    return SDL_EGL_LoadLibrary(_this, path, EGL_DEFAULT_DISPLAY, 0);
++}
++
++static SDL_GLContext PVRFB_GLES_CreateContext(_THIS, SDL_Window *window)
++{
++    SDL_WindowData *data = window->driverdata;
++
++    if (data->egl_surface == EGL_NO_SURFACE) {
++        data->egl_surface = SDL_EGL_CreateSurface(_this, (NativeWindowType)0);
++        if (data->egl_surface == EGL_NO_SURFACE) {
++            SDL_SetError("pvrfb: can't create the EGL surface");
++            return NULL;
++        }
++    }
++    return SDL_EGL_CreateContext(_this, data->egl_surface);
++}
++
++SDL_EGL_SwapWindow_impl(PVRFB)
++SDL_EGL_MakeCurrent_impl(PVRFB)
++
++static void PVRFB_Destroy(SDL_VideoDevice *device)
++{
++    SDL_free(device);
++}
++
++static SDL_VideoDevice *PVRFB_Create(void)
++{
++    SDL_VideoDevice *device = (SDL_VideoDevice *)SDL_calloc(1, sizeof(*device));
++
++    if (!device) {
++        SDL_OutOfMemory();
++        return NULL;
++    }
++    device->free = PVRFB_Destroy;
++    device->VideoInit = PVRFB_VideoInit;
++    device->VideoQuit = PVRFB_VideoQuit;
++    device->GetDisplayModes = PVRFB_GetDisplayModes;
++    device->SetDisplayMode = PVRFB_SetDisplayMode;
++    device->CreateSDLWindow = PVRFB_CreateWindow;
++    device->DestroyWindow = PVRFB_DestroyWindow;
++    device->PumpEvents = PVRFB_PumpEvents;
++    device->GL_LoadLibrary = PVRFB_GLES_LoadLibrary;
++    device->GL_GetProcAddress = SDL_EGL_GetProcAddress;
++    device->GL_UnloadLibrary = SDL_EGL_UnloadLibrary;
++    device->GL_CreateContext = PVRFB_GLES_CreateContext;
++    device->GL_MakeCurrent = PVRFB_GLES_MakeCurrent;
++    device->GL_SetSwapInterval = SDL_EGL_SetSwapInterval;
++    device->GL_GetSwapInterval = SDL_EGL_GetSwapInterval;
++    device->GL_SwapWindow = PVRFB_GLES_SwapWindow;
++    device->GL_DeleteContext = SDL_EGL_DeleteContext;
++    return device;
++}
++
++VideoBootStrap PVRFB_bootstrap = {
++    "pvrfb",
++    "PowerVR on the Linux framebuffer",
++    PVRFB_Create,
++    NULL /* no ShowMessageBox */
++};
++
++#endif /* SDL_VIDEO_DRIVER_PVRFB */
+diff -ruN a/src/video/pvrfb/SDL_pvrfbvideo.h b/src/video/pvrfb/SDL_pvrfbvideo.h
+--- a/src/video/pvrfb/SDL_pvrfbvideo.h
++++ b/src/video/pvrfb/SDL_pvrfbvideo.h
+@@ -0,0 +1,25 @@
++/*
++  PowerVR on the Linux framebuffer: SDL video for Imagination's EGL with the
++  null window system (libpvrNULL_WSEGL), as on the TrimUI Brick's GE8300.
++  There is no native window: EGL draws to the display behind /dev/fb0.
++*/
++#include "../../SDL_internal.h"
++
++#ifndef SDL_pvrfbvideo_h_
++#define SDL_pvrfbvideo_h_
++
++#include "../SDL_sysvideo.h"
++#include "../SDL_egl_c.h"
++
++typedef struct SDL_DisplayData
++{
++    int width, height, bpp;
++} SDL_DisplayData;
++
++/* Named as SDL's EGL helpers expect */
++typedef struct SDL_WindowData
++{
++    EGLSurface egl_surface;
++} SDL_WindowData;
++
++#endif /* SDL_pvrfbvideo_h_ */
