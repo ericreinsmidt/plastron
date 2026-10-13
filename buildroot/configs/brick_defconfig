@@ -33,6 +33,9 @@ BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_PX2_PATH)/board/brick/
 # Graphics: Imagination's GLES and EGL, and SDL2 drawing to the framebuffer
 # through them (the pvrfb video driver, see external.mk)
 BR2_PACKAGE_PVR_GE8300=y
+# TortOS's boot animation from the moment the framebuffer exists until
+# TortOS's first frame (splash-fb.c, started by /etc/init.d/brick)
+BR2_PACKAGE_SPLASH=y
 BR2_PACKAGE_SDL2=y
 BR2_PACKAGE_SDL2_OPENGLES=y
 

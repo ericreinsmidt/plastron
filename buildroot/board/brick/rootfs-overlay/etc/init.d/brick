@@ -34,6 +34,9 @@ start() {
 	# four in turn, 186 ms of TortOS's start where it is 17 ms expedited
 	# (measured 2026-10-12). Diatom does the same at every game.
 	echo 1 > /sys/kernel/rcu_expedited
+	# TortOS's boot animation, first: it draws from the moment the
+	# framebuffer exists and steps aside when TortOS draws (splash-fb.c)
+	splash &
 	watchdog -t 4 /dev/watchdog 2>/dev/null
 	mark init
 
