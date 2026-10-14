@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Sun, 11 Oct 2026 13:52:45 -0400
+Subject: [PATCH] The A133's BL31 goes in DRAM at 0x40000000, where its TF-A
+ platform puts it (SUNXI_BL31_IN_DRAM), as on the H616; without this it falls
+ through to the H6's SRAM address and the jump to BL31 lands nowhere. From the
+ TrimUI Smart Pro port posted to the U-Boot list in September 2026
+
+---
+ arch/arm/mach-sunxi/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-sunxi/Kconfig b/arch/arm/mach-sunxi/Kconfig
+index b0c5d3cd..b7ee14c6 100644
+--- a/arch/arm/mach-sunxi/Kconfig
++++ b/arch/arm/mach-sunxi/Kconfig
+@@ -267,7 +267,7 @@ config SUNXI_RVBAR_ALTERNATIVE
+ config SUNXI_BL31_BASE
+ 	hex
+ 	default 0x00044000 if MACH_SUN50I || MACH_SUN50I_H5
+-	default 0x40000000 if MACH_SUN50I_H616
++	default 0x40000000 if MACH_SUN50I_H616 || MACH_SUN50I_A133
+ 	default 0x00104000 if SUN50I_GEN_H6
+ 	default 0x00054000 if MACH_SUN55I_A523
+ 	default 0x0

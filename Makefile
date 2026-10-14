@@ -23,7 +23,7 @@ SOURCES := -v $(TORTOS_SRC):/tortos:ro -v $(DIATOM_SRC):/diatom:ro -v $(TORTOS_V
 	$(if $(wildcard $(TORTOS_SS_ENV)),-v $(TORTOS_SS_ENV):/tortos-ss.env:ro)
 DOCKER_RUN := docker run --rm -t -v $(CURDIR):/src:ro $(SOURCES) -v $(VOLUME):/work $(IMAGE)
 
-.PHONY: all builder volume image base brick bootloader shell linux-rebuild copy-out clean-output release
+.PHONY: all builder volume image base brick brick-bootloader bootloader shell linux-rebuild copy-out clean-output release
 
 all: image
 
@@ -60,6 +60,21 @@ brick: builder volume
 	docker run --rm -t -e FLAVOR=brick -v $(CURDIR):/src:ro $(SOURCES) \
 		-v $(BRICK_GPU):/brick-gpu:ro -v $(BRICK_MODULES):/brick-modules:ro \
 		-v $(VOLUME):/work $(IMAGE) sh /src/scripts/build.sh $(BRICK_TARGET)
+
+# The TrimUI Brick's boot loader: TF-A's BL31 and U-Boot, built by
+# scripts/build-brick-bootloader.sh in docker/brick-boot (the GCC 14 it was
+# tested with) into buildroot/board/brick/bootloader/u-boot-sunxi-with-spl.bin,
+# which goes 128 KiB into the card. Rarely needed: the result is committed.
+BRICK_BOOT_IMAGE := plastron-brick-boot
+brick-bootloader: volume
+	docker build -q -t $(BRICK_BOOT_IMAGE) docker/brick-boot
+	docker run --rm -v $(CURDIR):/src:ro -v $(VOLUME):/work $(BRICK_BOOT_IMAGE) \
+		sh /src/scripts/build-brick-bootloader.sh
+	mkdir -p buildroot/board/brick/bootloader
+	docker run --rm -v $(VOLUME):/work -v $(CURDIR)/buildroot/board/brick/bootloader:/out \
+		--user root $(BRICK_BOOT_IMAGE) sh -c 'cp /work/brick-boot/u-boot-sunxi-with-spl.bin /out/ && \
+		chown $(shell id -u):$(shell id -g) /out/u-boot-sunxi-with-spl.bin'
+	@ls -l buildroot/board/brick/bootloader/u-boot-sunxi-with-spl.bin
 
 # U-Boot, packed into buildroot/board/px2/bootloader/u-boot-px2.bin. Rarely
 # needed: the result is committed, and `make` only uses it.

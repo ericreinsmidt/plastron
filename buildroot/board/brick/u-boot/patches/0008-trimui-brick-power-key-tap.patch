@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Tue, 13 Oct 2026 00:57:13 -0400
+Subject: [PATCH] The TrimUI Brick's power key turns it on with a tap (128 ms)
+ where it took a 1 s hold, as TrimUI left it (AXP717 register 0x26, 0x1e ->
+ 0x1c; long press 1.5 s and forced power-off at 10 s kept). Set in SPL with
+ the Brick's other PMIC values at every boot, as the PMIC holds it for the
+ next power-on while the battery is connected; tried from Linux first, a tap
+ started it
+
+---
+ board/sunxi/board.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/board/sunxi/board.c b/board/sunxi/board.c
+index 62204d15..496f0150 100644
+--- a/board/sunxi/board.c
++++ b/board/sunxi/board.c
+@@ -605,6 +605,13 @@ void sunxi_board_init(void)
+ 		};
+ 		for (int i = 0; i < ARRAY_SIZE(brick_ldo); i++)
+ 			pmic_bus_write(brick_ldo[i][0], brick_ldo[i][1]);
++		/*
++		 * The power key: on with a tap (128 ms) where it took a 1 s hold,
++		 * as TrimUI left it (0x1e); long press 1.5 s and forced off at
++		 * 10 s kept. The PMIC holds this while the battery is connected,
++		 * so it is set here at every boot for the next power-on.
++		 */
++		pmic_bus_write(0x26, 0x1c);
+ 	}
+ #endif
+ 

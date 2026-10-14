@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Mon, 12 Oct 2026 23:39:32 -0400
+Subject: [PATCH] sunxi, ARM64: the instruction cache on from the start, in SPL
+ and in U-Boot proper before driver model, where both ran without it until
+ U-Boot had relocated itself (it needs no MMU on ARMv8). On the TrimUI Brick
+ SPL read U-Boot from the card in 193 ms where it took 360, and U-Boot's early
+ phase took 87 ms where it took 164: the kernel starts 1.17 s after reset,
+ where it was 1.42
+
+---
+ arch/arm/mach-sunxi/board.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/arch/arm/mach-sunxi/board.c b/arch/arm/mach-sunxi/board.c
+index 432b1c10..48527a74 100644
+--- a/arch/arm/mach-sunxi/board.c
++++ b/arch/arm/mach-sunxi/board.c
+@@ -471,6 +471,15 @@ u32 spl_mmc_boot_mode(struct mmc *mmc, const u32 boot_device)
+ 
+ void board_init_f(ulong dummy)
+ {
++#ifdef CONFIG_ARM64
++	/*
++	 * SPL never turns its caches on, so it read U-Boot from the card at
++	 * 1.4 MB/s, every instruction of the copy fetched over the bus. The
++	 * instruction cache needs no MMU on ARMv8: on the TrimUI Brick this
++	 * took the read from 360 ms to 193.
++	 */
++	icache_enable();
++#endif
+ 	sunxi_sram_init();
+ 
+ 	/* Enable non-secure access to some peripherals */
+@@ -531,6 +540,20 @@ void reset_cpu(void)
+ }
+ #endif /* CONFIG_SYSRESET */
+ 
++#if !defined(CONFIG_XPL_BUILD) && defined(CONFIG_ARM64)
++/*
++ * U-Boot proper starts with its caches off and turns them on only after it
++ * has relocated itself. The instruction cache needs no MMU, so it goes on
++ * here, before driver model binds the devices: that is CPU work, and
++ * without the cache every instruction is a fetch over the bus.
++ */
++int mach_cpu_init(void)
++{
++	icache_enable();
++	return 0;
++}
++#endif
++
+ #if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF) && defined(CONFIG_CPU_V7A)
+ void enable_caches(void)
+ {

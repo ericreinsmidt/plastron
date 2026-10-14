@@ -1,0 +1,142 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Sun, 11 Oct 2026 13:53:25 -0400
+Subject: [PATCH] The TrimUI Brick (A133P, LPDDR3, AXP717): a device tree with
+ what U-Boot needs (the SD card, the PMIC, the serial port; the eMMC left out
+ on purpose), its defconfig with boot0's DRAM values at 672 MHz and
+ DCDC2/DCDC3 where boot0 leaves them, the LDOs as TrimUI's system has them,
+ and a boot command that starts the PLLs boot0 starts (Allwinner's 4.9 kernel
+ can't), loads the kernel, initramfs and device tree from the card's fifth
+ partition, disables the eMMC in that tree and boots. Started over FEL, it
+ runs a script at 0x43100000 first
+
+---
+ board/sunxi/board.c                           | 19 ++++++++
+ configs/trimui-brick_defconfig                | 34 ++++++++++++++
+ .../allwinner/sun50i-a133-trimui-brick.dts    | 46 +++++++++++++++++++
+ 3 files changed, 99 insertions(+)
+ create mode 100644 configs/trimui-brick_defconfig
+ create mode 100644 dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-brick.dts
+
+diff --git a/board/sunxi/board.c b/board/sunxi/board.c
+index 3d1afec7..62204d15 100644
+--- a/board/sunxi/board.c
++++ b/board/sunxi/board.c
+@@ -589,6 +589,25 @@ void sunxi_board_init(void)
+ 	defined CONFIG_AXP803_POWER
+ 	power_failed = axp_init();
+ 
++#if defined(CONFIG_AXP717_POWER) && defined(CONFIG_MACH_SUN50I_A133)
++	/*
++	 * The TrimUI Brick's LDOs as TrimUI's system has them (voltages
++	 * 0x93-0x9f, then enables 0x90 and 0x91), read from the PMIC there;
++	 * ALDO2 at 3.3 V, as in TrimUI's boot-time table. TrimUI's boot0 turns
++	 * these on before the kernel; the kernel expects them on.
++	 */
++	if (!power_failed) {
++		static const u8 brick_ldo[][2] = {
++			{ 0x93, 0x0d }, { 0x94, 0x1c }, { 0x95, 0x1c }, { 0x96, 0x0d },
++			{ 0x97, 0x1c }, { 0x98, 0x0d }, { 0x99, 0x1c }, { 0x9a, 0x0d },
++			{ 0x9b, 0x0d }, { 0x9c, 0x1c }, { 0x9d, 0x1c }, { 0x9e, 0x1c },
++			{ 0x9f, 0x08 }, { 0x90, 0x7e }, { 0x91, 0xdd },
++		};
++		for (int i = 0; i < ARRAY_SIZE(brick_ldo); i++)
++			pmic_bus_write(brick_ldo[i][0], brick_ldo[i][1]);
++	}
++#endif
++
+ 	if (IS_ENABLED(CONFIG_AXP_DISABLE_BOOT_ON_POWERON) && !power_failed) {
+ 		u8 boot_reason;
+ 
+diff --git a/configs/trimui-brick_defconfig b/configs/trimui-brick_defconfig
+new file mode 100644
+index 00000000..ce9de1c4
+--- /dev/null
++++ b/configs/trimui-brick_defconfig
+@@ -0,0 +1,34 @@
++CONFIG_ARM=y
++CONFIG_ARCH_SUNXI=y
++CONFIG_DEFAULT_DEVICE_TREE="allwinner/sun50i-a133-trimui-brick"
++CONFIG_DRAM_CLK=672
++CONFIG_SPL=y
++CONFIG_DRAM_SUNXI_DX_ODT=0x06060606
++CONFIG_DRAM_SUNXI_DX_DRI=0x0c0c0c0c
++CONFIG_DRAM_SUNXI_CA_DRI=0x1919
++CONFIG_DRAM_SUNXI_PARA0=0x1b181215
++CONFIG_DRAM_SUNXI_TPR0=0x16161a1e
++CONFIG_DRAM_SUNXI_TPR1=0x80000000
++CONFIG_DRAM_SUNXI_TPR6=0xb20000
++CONFIG_DRAM_SUNXI_TPR10=0x2fbbdf
++CONFIG_DRAM_SUNXI_TPR11=0x18160b0e
++CONFIG_DRAM_SUNXI_TPR12=0x0f10100f
++CONFIG_DRAM_SUNXI_TPR13=0x01007521
++CONFIG_DRAM_SUNXI_TPR14=0x1e1e2020
++CONFIG_MACH_SUN50I_A133=y
++CONFIG_SUNXI_DRAM_A133_LPDDR3=y
++CONFIG_R_I2C_ENABLE=y
++# CONFIG_SYS_MALLOC_CLEAR_ON_INIT is not set
++CONFIG_SPL_I2C=y
++CONFIG_SPL_SYS_I2C_LEGACY=y
++CONFIG_SYS_I2C_MVTWSI=y
++CONFIG_SYS_I2C_SLAVE=0x7f
++CONFIG_SYS_I2C_SPEED=400000
++CONFIG_AXP717_POWER=y
++CONFIG_AXP_I2C_ADDRESS=0x34
++CONFIG_AXP_DCDC2_VOLT=900
++CONFIG_AXP_DCDC3_VOLT=1200
++CONFIG_BOOTDELAY=0
++CONFIG_ENV_IS_NOWHERE=y
++CONFIG_USE_BOOTCOMMAND=y
++CONFIG_BOOTCOMMAND="if test -n ${fel_booted}; then source 0x43100000; fi; mw.l 0x03001128 0xd1303333; mw.l 0x03001160 0xc0014396; mw.l 0x03001178 0xc001eb85; mw.l 0x03001028 0xa9003100; mw.l 0x03001030 0xa8007403; mw.l 0x03001040 0xa8001803; mw.l 0x03001048 0xa8006203; mw.l 0x03001050 0xa8003701; mw.l 0x03001058 0xa8002301; mw.l 0x03001060 0xa9002401; mw.l 0x03001068 0xa8003101; mw.l 0x03001078 0xa9042701; if load mmc 0:5 ${kernel_addr_r} brick/boot/Image && load mmc 0:5 ${ramdisk_addr_r} brick/boot/initramfs.cpio.gz && setenv rdsize ${filesize} && load mmc 0:5 ${fdt_addr_r} brick/boot/brick.dtb; then fdt addr ${fdt_addr_r}; fdt resize 4096; fdt rsvmem add 0x40000000 0x40000; fdt set /soc@03000000/sdmmc@04022000 status disabled; setenv bootargs console=ttyS0,115200 loglevel=1 rdinit=/rdinit cma=64M; booti ${kernel_addr_r} ${ramdisk_addr_r}:${rdsize} ${fdt_addr_r}; fi"
+diff --git a/dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-brick.dts b/dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-brick.dts
+new file mode 100644
+index 00000000..c5fa16c1
+--- /dev/null
++++ b/dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-brick.dts
+@@ -0,0 +1,46 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * TrimUI Brick (A133P): what U-Boot needs to reach the kernel, the SD card
++ * and the PMIC. No regulator constraints here: SPL sets DCDC2 and DCDC3 to
++ * what TrimUI's boot0 leaves them at, and the LDOs as TrimUI's system has
++ * them (board/sunxi/board.c). The internal eMMC is left out on purpose.
++ */
++
++/dts-v1/;
++
++#include "sun50i-a100.dtsi"
++
++/ {
++	model = "TrimUI Brick";
++	compatible = "trimui,brick", "allwinner,sun50i-a100";
++
++	aliases {
++		serial0 = &uart0;
++		mmc0 = &mmc0;
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++};
++
++&mmc0 {
++	bus-width = <4>;
++	broken-cd;
++	status = "okay";
++};
++
++&r_i2c0 {
++	status = "okay";
++
++	axp717: pmic@34 {
++		compatible = "x-powers,axp717";
++		reg = <0x34>;
++	};
++};
++
++&uart0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart0_pb_pins>;
++	status = "okay";
++};
