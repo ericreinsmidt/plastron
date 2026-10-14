@@ -52,7 +52,10 @@ BRICK_GPU ?= $(HOME)/brick-runtime/gpu-ddk-1.11
 # that kernel needs) and exported there by brick-spike/runtime/export-modules.sh
 BRICK_MODULES ?= $(HOME)/brick-runtime/modules
 brick: builder volume
-	@[ -d "$(BRICK_GPU)/lib64" ] || { echo "no GPU libraries in $(BRICK_GPU)" >&2; exit 1; }
+	@[ -d "$(BRICK_GPU)/lib64" ] || { echo "no GPU libraries in $(BRICK_GPU): the Brick needs" \
+		"Imagination's PowerVR DDK 1.11@5516664 userspace libraries for the GE8300," \
+		"which plastron doesn't include (buildroot/package/pvr-ge8300/Config.in" \
+		"says which files and where they go)" >&2; exit 1; }
 	@[ -f "$(BRICK_MODULES)/pvrsrvkm.ko" ] || { echo "no kernel modules in $(BRICK_MODULES)" >&2; exit 1; }
 	docker run --rm -t -e FLAVOR=brick -v $(CURDIR):/src:ro $(SOURCES) \
 		-v $(BRICK_GPU):/brick-gpu:ro -v $(BRICK_MODULES):/brick-modules:ro \

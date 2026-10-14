@@ -11,10 +11,24 @@ config BR2_PACKAGE_PVR_GE8300
 	  from, with the null window system that draws to the Linux
 	  framebuffer, and the GPU's firmware.
 
-	  Closed binaries, from Allwinner's SDK as Creality published it
-	  (the Sonic Pad SDK's package/libs/libgpu/ge8300/fbdev/glibc).
-	  They are never committed: the build takes them from a folder
-	  mounted at /brick-gpu (see the Makefile).
+	  Imagination's closed binaries, under Imagination's own terms: they
+	  are not part of plastron, are never committed, and come with no
+	  license from us. The build takes them from a folder mounted at
+	  /brick-gpu (BRICK_GPU in the Makefile, ~/brick-runtime/gpu-ddk-1.11
+	  by default), laid out as:
+
+	    lib64/      libEGL.so libGLESv2.so libGLES_CM.so libIMGegl.so
+	                libsrv_um.so libglslcompiler.so libusc.so
+	                libpvrNULL_WSEGL.so
+	    lib64/firmware/rgx.fw.22.102.54.38
+	    include/    the Khronos headers: EGL, KHR, GLES, GLES2, GLES3
+
+	  They are the Imagination PowerVR DDK 1.11@5516664 userspace
+	  libraries for the GE8300 (fbdev window system, glibc, aarch64),
+	  as Allwinner ships them in its A133 SDKs. Nothing else will do:
+	  they must match the kernel's GPU driver exactly, and other copies
+	  around (TrimUI's are DDK 1.19) don't. The build checks each file
+	  against files.sha256 and stops on any difference.
 
 if BR2_PACKAGE_PVR_GE8300
 

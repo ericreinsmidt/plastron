@@ -55,4 +55,14 @@ define PVR_GE8300_INSTALL_TARGET_CMDS
 		$(TARGET_DIR)/etc/powervr.ini
 endef
 
+# Only DDK 1.11@5516664 matches the kernel's GPU driver: every file is
+# checked before anything is installed (see Config.in for what they are)
+define PVR_GE8300_CHECK_FILES
+	cd $(@D) && sha256sum -c --quiet $(PVR_GE8300_PKGDIR)/files.sha256 || { \
+		echo "pvr-ge8300: these aren't the DDK 1.11@5516664 libraries the" \
+			"kernel's GPU driver needs (see package/pvr-ge8300/Config.in)" >&2; \
+		exit 1; }
+endef
+PVR_GE8300_PRE_CONFIGURE_HOOKS += PVR_GE8300_CHECK_FILES
+
 $(eval $(generic-package))
