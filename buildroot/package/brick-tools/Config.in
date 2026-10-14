@@ -1,0 +1,8 @@
+config BR2_PACKAGE_BRICK_TOOLS
+	bool "brick-tools"
+	help
+	  Two small programs /etc/init.d/brick runs on the TrimUI Brick,
+	  into /usr/lib/brick: backlight (on, off or a level, through the
+	  Allwinner display driver), lit before each TortOS start; and
+	  sincereset, which logs how long the boot took before the
+	  kernel, from the timer that counts from reset.

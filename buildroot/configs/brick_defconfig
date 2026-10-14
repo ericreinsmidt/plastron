@@ -36,6 +36,10 @@ BR2_PACKAGE_PVR_GE8300=y
 # TortOS's boot animation from the moment the framebuffer exists until
 # TortOS's first frame (splash-fb.c, started by /etc/init.d/brick)
 BR2_PACKAGE_SPLASH=y
+# The kernel modules (the GPU's, the gamepad's) and the two startup tools, in
+# /usr/lib/brick, where /etc/init.d/brick loads and runs them
+BR2_PACKAGE_BRICK_KMODS=y
+BR2_PACKAGE_BRICK_TOOLS=y
 BR2_PACKAGE_SDL2=y
 BR2_PACKAGE_SDL2_OPENGLES=y
 

@@ -48,10 +48,15 @@ base: builder volume
 # come from BRICK_GPU, the userspace half of DDK 1.11@5516664 from the Sonic
 # Pad SDK (lib64/ and include/), mounted at /brick-gpu.
 BRICK_GPU ?= $(HOME)/brick-runtime/gpu-ddk-1.11
+# Its kernel modules too, built with its kernel in carapace (GCC 10, which
+# that kernel needs) and exported there by brick-spike/runtime/export-modules.sh
+BRICK_MODULES ?= $(HOME)/brick-runtime/modules
 brick: builder volume
 	@[ -d "$(BRICK_GPU)/lib64" ] || { echo "no GPU libraries in $(BRICK_GPU)" >&2; exit 1; }
+	@[ -f "$(BRICK_MODULES)/pvrsrvkm.ko" ] || { echo "no kernel modules in $(BRICK_MODULES)" >&2; exit 1; }
 	docker run --rm -t -e FLAVOR=brick -v $(CURDIR):/src:ro $(SOURCES) \
-		-v $(BRICK_GPU):/brick-gpu:ro -v $(VOLUME):/work $(IMAGE) sh /src/scripts/build.sh $(BRICK_TARGET)
+		-v $(BRICK_GPU):/brick-gpu:ro -v $(BRICK_MODULES):/brick-modules:ro \
+		-v $(VOLUME):/work $(IMAGE) sh /src/scripts/build.sh $(BRICK_TARGET)
 
 # U-Boot, packed into buildroot/board/px2/bootloader/u-boot-px2.bin. Rarely
 # needed: the result is committed, and `make` only uses it.
