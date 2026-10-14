@@ -67,6 +67,9 @@ BR2_PACKAGE_UTIL_LINUX_PARTX=y
 # dirty (/etc/init.d/brick)
 BR2_PACKAGE_DOSFSTOOLS=y
 BR2_PACKAGE_DOSFSTOOLS_FSCK_FAT=y
+# The games partition is exFAT, labeled TORTOS, as on the Pixel: mkfs.exfat
+# makes it, fsck.exfat repairs it after a power-off that left it dirty
+BR2_PACKAGE_EXFATPROGS=y
 
 # The root: ext4, in the card's partition named plastron-root, which the
 # spike's initramfs (carapace brick-spike/startup/rootswitch.c) mounts. Not
