@@ -7,8 +7,8 @@
 # the root. Each step's time since the kernel started goes to /tmp/boot-times.
 #
 # The card's games partition, exFAT and labeled TORTOS as on the Pixel 2, is
-# /mnt/SDCARD: TortOS, games, music, saves. Until TortOS has been moved onto
-# it, the SPIKE partition (FAT32) is used instead, as it was. The kernel
+# /mnt/SDCARD: TortOS, games, music, saves; a freshly written card gets it
+# and TortOS on its first boot. The kernel
 # modules and the two bring-up tools are in the root (/usr/lib/brick), so the
 # partition the boot loader reads its files from isn't mounted at all.
 
@@ -41,6 +41,69 @@ part() {
 	done
 }
 
+# The card image holds the boot and root partitions; on its first boot the
+# rest of the card becomes the games partition, as the Pixel 2's datapart does:
+# right after root, on a 4 MiB boundary (the card's erase blocks), exFAT,
+# labeled TORTOS, named tortos in the GPT. The image's backup GPT sits at the
+# end of the image, not the card, so it moves to the card's end first.
+games_create() {
+	card=/dev/mmcblk0
+	echo "brick: first boot, adding the games partition" > /dev/kmsg
+	root=/sys/class/block/$(basename $(part plastron-root))
+	start=$(( $(cat $root/start) + $(cat $root/size) ))
+	start=$(( (start + 8191) / 8192 * 8192 ))
+	sfdisk --quiet --relocate gpt-bak-std $card &&
+	echo "start=$start, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, name=tortos" |
+		sfdisk --quiet --append --no-reread $card &&
+	partx --add --nr 3 $card &&
+	mkfs.exfat -L TORTOS ${card}p3 > /dev/null || {
+		echo "brick: couldn't add the games partition" > /dev/kmsg
+		return
+	}
+	: > /tmp/games-new
+	echo "brick: ${card}p3 formatted as exFAT, label TORTOS" > /dev/kmsg
+	echo ${card}p3
+}
+
+# TortOS onto the card from the image (/usr/share/tortos/card): on the first
+# boot, whenever it goes missing, and when the image's is newer, never an older
+# one over a newer, as the Pixel 2's /etc/init.d/tortos does. Only adds: the
+# player's games, saves and TortOS's own state stay. tortos.elf goes last,
+# after a sync, so a copy cut short starts over at the next boot. SEED_V is
+# the image's version, written in by board/brick/post-build.sh.
+SEED=/usr/share/tortos/card
+SEED_V=
+version_of() {
+	v=
+	[ -f "$1" ] || return 1
+	IFS=. read -r a b c < "$1"
+	case "$a.$b.${c:-0}" in
+	*[!0-9.]* | .* | *..*) return 1 ;;
+	esac
+	v=$((a * 1000000 + b * 1000 + ${c:-0}))
+}
+tortos_seed() {
+	[ -f $SEED/TortOS/tortos.elf ] || return
+	if [ -f $SDCARD/TortOS/tortos.elf ]; then
+		[ -n "$SEED_V" ] || return
+		version_of $SDCARD/TortOS/VERSION && [ "$SEED_V" -le "$v" ] && return
+		echo "brick: the image carries a newer TortOS than the card; copying it" > /dev/kmsg
+		rm -f $SDCARD/TortOS/tortos.elf
+	else
+		echo "brick: no TortOS on the card; copying it from the image" > /dev/kmsg
+	fi
+	mkdir -p $SDCARD/TortOS
+	for f in $SEED/TortOS/* $SEED/TortOS/.[!.]*; do
+		[ -e "$f" ] && [ "${f##*/}" != tortos.elf ] && cp -R "$f" $SDCARD/TortOS/
+	done
+	for d in $SEED/*; do
+		[ "${d##*/}" != TortOS ] && cp -R "$d" $SDCARD/
+	done
+	sync
+	cp $SEED/TortOS/tortos.elf $SDCARD/TortOS/ && sync
+	echo "brick: TortOS copied onto the card" > /dev/kmsg
+}
+
 start() {
 	# RCU grace periods expedited, as the kernel had them until now
 	# (RCU_EXPEDITE_BOOT): closing an input device waits for one, about
@@ -66,19 +129,17 @@ start() {
 		mark "governor: ondemand"
 	) &
 
-	# The games partition, or SPIKE while TortOS isn't on it yet
+	# The games partition: added over the rest of the card on the first boot
+	# of a freshly written card, checked when it wasn't unmounted cleanly,
+	# and given TortOS from the image when it has none or an older one
 	mkdir -p $SDCARD
 	games=$(part tortos)
+	[ -n "$games" ] || games=$(games_create)
 	if [ -n "$games" ]; then
 		repair $games exfat
 		mount -t exfat -o noatime $games $SDCARD
-		[ -d $SDCARD/TortOS ] || umount $SDCARD
-	fi
-	if ! grep -q " $SDCARD " /proc/mounts; then
-		spike=$(part rootfs)
-		spike=${spike:-/dev/mmcblk0p5}
-		repair $spike fat
-		mount -t vfat -o noatime $spike $SDCARD
+		[ -f /tmp/games-new ] && touch $SDCARD/.metadata_never_index
+		tortos_seed
 	fi
 	mark card
 	# The time before the kernel, from the timer that counts from reset

@@ -1,8 +1,9 @@
 #!/bin/sh
-# The TrimUI Brick's boot files, beside the root's image in output-brick/images:
-# the initramfs (rootswitch, as /rdinit), boot.scr from board/brick/boot.cmd,
-# the kernel and device tree from make brick-kernel (in this volume), and the
-# boot loader (board/brick/bootloader, from make brick-bootloader).
+# The TrimUI Brick's card, sdcard.img in output-brick/images: its boot files
+# (the initramfs, rootswitch as /rdinit; boot.scr from board/brick/boot.cmd;
+# the kernel and device tree from make brick-kernel, in this volume; the boot
+# loader, board/brick/bootloader, from make brick-bootloader) and the root, laid
+# out by board/brick/genimage.cfg.
 set -eu
 BOARD=$BR2_EXTERNAL_PX2_PATH/board/brick
 KERNEL=/work/brick-kernel/images
@@ -25,3 +26,4 @@ for f in Image brick.dtb; do
 	cp "$KERNEL/$f" "$BINARIES_DIR/"
 done
 cp "$BOARD/bootloader/u-boot-sunxi-with-spl.bin" "$BINARIES_DIR/"
+support/scripts/genimage.sh -c "$BOARD/genimage.cfg"

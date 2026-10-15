@@ -1,4 +1,4 @@
-# The Brick's boot, as its U-Boot runs it from brick/boot/boot.scr (made from
+# The Brick's boot, as its U-Boot runs it from boot.scr (made from
 # this by board/brick/post-image.sh). If anything here fails, U-Boot's own boot
 # command carries on and boots the uncompressed Image as before.
 
@@ -15,9 +15,9 @@ setexpr.l pllcpux *0x03001000
 
 # The kernel uncompressed: LZ4 read in 200 ms less, but U-Boot took 265 ms
 # to unpack it (tried 2026-10-12)
-if load mmc 0:5 ${kernel_addr_r} brick/boot/Image &&
-   load mmc 0:5 ${ramdisk_addr_r} brick/boot/initramfs.cpio.gz && setenv rdsize ${filesize} &&
-   load mmc 0:5 ${fdt_addr_r} brick/boot/brick.dtb; then
+if load mmc 0:1 ${kernel_addr_r} Image &&
+   load mmc 0:1 ${ramdisk_addr_r} initramfs.cpio.gz && setenv rdsize ${filesize} &&
+   load mmc 0:1 ${fdt_addr_r} brick.dtb; then
 	fdt addr ${fdt_addr_r}
 	fdt resize 4096
 	fdt rsvmem add 0x40000000 0x40000

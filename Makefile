@@ -59,6 +59,7 @@ brick: builder volume
 	docker run --rm -t -e FLAVOR=brick -v $(CURDIR):/src:ro $(SOURCES) \
 		-v $(BRICK_GPU):/brick-gpu:ro \
 		-v $(VOLUME):/work $(IMAGE) sh /src/scripts/build.sh $(BRICK_TARGET)
+	$(if $(BRICK_TARGET),,$(MAKE) copy-out OUTPUT=output-brick CARD=brick-sdcard.img)
 
 # The TrimUI Brick's kernel and the modules it loads: Allwinner's Linux 4.9
 # with board/brick/linux/patches, built by scripts/build-brick-kernel.sh in

@@ -90,4 +90,10 @@ BR2_TARGET_ROOTFS_EXT2_MKFS_OPTIONS="-O ^64bit,^orphan_file"
 BR2_PACKAGE_BRICK_ROOTSWITCH=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS=y
 BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_PX2_PATH)/board/brick/post-image.sh"
+# The card image (board/brick/genimage.cfg), and TortOS's version written into
+# the startup script, which copies TortOS onto the card
+BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_PX2_PATH)/board/brick/post-build.sh"
+BR2_PACKAGE_HOST_DOSFSTOOLS=y
+BR2_PACKAGE_HOST_GENIMAGE=y
+BR2_PACKAGE_HOST_MTOOLS=y
 # BR2_TARGET_ROOTFS_TAR is not set

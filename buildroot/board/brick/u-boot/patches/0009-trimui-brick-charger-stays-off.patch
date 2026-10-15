@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] The TrimUI Brick stays off when a charger is plugged in: the
+ PMIC powers on for it whatever the boot loader says, so when the cable was
+ the only reason (REG 20 says why), it powers off again at once and the
+ battery charges with the Brick off
+
+---
+--- a/board/sunxi/board.c
++++ b/board/sunxi/board.c
+@@ -612,6 +612,20 @@
+ 		 * so it is set here at every boot for the next power-on.
+ 		 */
+ 		pmic_bus_write(0x26, 0x1c);
++		/*
++		 * Plugging in a charger powers the Brick on: the PMIC's factory
++		 * setting, which no register changes. When the cable was the only
++		 * reason this time (REG 20: bit 2 VBUS insert, bit 0 the power key;
++		 * 0 after a restart, which isn't a power-on), it powers off again
++		 * (REG 27 bit 0), and the battery charges with the Brick off.
++		 */
++		u8 source;
++
++		if (!pmic_bus_read(0x20, &source) && (source & 0x05) == 0x04) {
++			pmic_bus_setbits(0x27, 0x01);
++			for (;;)
++				;
++		}
+ 	}
+ #endif
+ 

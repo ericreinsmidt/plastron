@@ -66,16 +66,15 @@ endef
 # when it is given one (it was never passed before 2026-10-06).
 TORTOS_CARD = $(TARGET_DIR)/usr/share/tortos/card
 ifeq ($(TORTOS_DEVICE),brick)
-# For now the Brick's TortOS still comes from its own release on the card,
-# and only these two are swapped in from here; the payload, and TortOS
-# installed by the image as on the Pixel, come with the Brick's own image
+# The Brick's own system: TortOS's payload for it (NATIVE=1, without what
+# only TrimUI's firmware uses), which /etc/init.d/brick copies onto the card
 define TORTOS_INSTALL_TARGET_CMDS
-	$(INSTALL) -D -m 0755 $(@D)/$(TORTOS_BUILD_DIR)/tortos.elf \
-		$(TARGET_DIR)/usr/share/tortos/brick/tortos.elf
-	$(INSTALL) -D -m 0755 $(@D)/$(TORTOS_BUILD_DIR)/muse \
-		$(TARGET_DIR)/usr/share/tortos/brick/muse
-	$(INSTALL) -D -m 0755 $(DIATOM_DIR)/build/brick/diatom \
-		$(TARGET_DIR)/usr/share/tortos/brick/diatom
+	DEVICE=brick NATIVE=1 OUT=$(TORTOS_CARD) ZIP= VERSION="$(TORTOS_VERSION_NUMBER)" \
+		TORTOS_ELF=$(@D)/$(TORTOS_BUILD_DIR)/tortos.elf \
+		MUSE_ELF=$(@D)/$(TORTOS_BUILD_DIR)/muse \
+		DIATOM_ELF=$(DIATOM_DIR)/build/brick/diatom \
+		VENDOR_DIR=/tortos-vendor \
+		sh $(@D)/mk/payload.sh
 endef
 else
 define TORTOS_INSTALL_TARGET_CMDS
