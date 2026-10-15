@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] AXP2202: with Type-C in use, the USB input current limit is
+ left to the PMIC, which sets it at every attach from what the source offers
+ on CC (3 A from a 3 A charger) rather than the 500 mA written at boot
+
+---
+--- a/drivers/power/supply/axp2202_charger.c
++++ b/drivers/power/supply/axp2202_charger.c
+@@ -1041,20 +1041,28 @@
+ 	data = (clamp_val(usbad_vol, 3880, 5080) - 3880) / 80;
+ 	regmap_update_bits(regmap, AXP2202_VIMDPM_CFG, GENMASK(3, 0), data);
+ 
+-	/* BC1.2 detection, and the input current limit's own setting with it */
+-	if (bc12_en) {
+-		regmap_update_bits(regmap, AXP2202_CLK_EN, BIT(4), BIT(4));
++	/* BC1.2 detection */
++	regmap_update_bits(regmap, AXP2202_CLK_EN, BIT(4), bc12_en ? BIT(4) : 0);
++
++	/*
++	 * The input current limit. With Type-C in use the PMIC sets it itself,
++	 * at every attach, from what the source offers on CC (the USB default,
++	 * 1.5 A or 3 A), as long as bit 7 is clear, which leaves it to the
++	 * PMIC; so it is left as the PMIC set it. Measured on the Brick
++	 * 2026-10-14: a Mac's port offering 3 A gave 3000 mA (REG 06 says
++	 * Type-C CC set it), where with bit 7 set it stayed at the 500 mA
++	 * written here. Without Type-C, the limit is pmu_usbpc_cur, as before.
++	 */
++	if (typec_used || bc12_en) {
+ 		regmap_update_bits(regmap, AXP2202_IIN_LIM, BIT(7), 0);
+ 	} else {
+-		regmap_update_bits(regmap, AXP2202_CLK_EN, BIT(4), 0);
+ 		regmap_update_bits(regmap, AXP2202_IIN_LIM, BIT(7), BIT(7));
++		/* 150 mA plus 50 mA a step, 0 meaning 100 mA */
++		usbpc_cur = clamp_val(usbpc_cur, 100, 3250);
++		data = usbpc_cur < 150 ? 0 : (usbpc_cur - 150) / 50 + 1;
++		regmap_update_bits(regmap, AXP2202_IIN_LIM, GENMASK(5, 0), data);
+ 	}
+ 
+-	/* 150 mA plus 50 mA a step, 0 meaning 100 mA */
+-	usbpc_cur = clamp_val(usbpc_cur, 100, 3250);
+-	data = usbpc_cur < 150 ? 0 : (usbpc_cur - 150) / 50 + 1;
+-	regmap_update_bits(regmap, AXP2202_IIN_LIM, GENMASK(5, 0), data);
+-
+ 	/* The boost's voltage, for when the port supplies power instead */
+ 	data = (clamp_val(boost_vol, 4550, 5510) - 4550) / 64;
+ 	regmap_update_bits(regmap, AXP2202_BST_CFG0, GENMASK(7, 4), data << 4);
