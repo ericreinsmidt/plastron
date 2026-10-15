@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Mon, 12 Oct 2026 12:11:00 -0400
+Subject: [PATCH] The AXP2202 charger probes beside the rest of the boot: it
+ can rewrite the fuel gauge's battery model over I2C, about 127 ms on the
+ Brick, and nothing reads the battery that early
+
+---
+ drivers/power/supply/axp2202_charger.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/power/supply/axp2202_charger.c b/drivers/power/supply/axp2202_charger.c
+index c3d2f8054..2da2c1f8f 100644
+--- a/drivers/power/supply/axp2202_charger.c
++++ b/drivers/power/supply/axp2202_charger.c
+@@ -1426,6 +1426,12 @@ MODULE_DEVICE_TABLE(of, axp2202_charger_dt_ids);
+ static struct platform_driver axp2202_charger_driver = {
+ 	.driver = {
+ 		.name = "axp2202-power-supply",
++		/*
++		 * Probed beside the rest of the boot: it can rewrite the fuel
++		 * gauge's battery model over I2C, about 127 ms on the Brick, and
++		 * nothing reads the battery that early
++		 */
++		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
+ 	},
+ 	.probe = axp2202_charger_probe,
+ 	.remove = axp2202_charger_remove,

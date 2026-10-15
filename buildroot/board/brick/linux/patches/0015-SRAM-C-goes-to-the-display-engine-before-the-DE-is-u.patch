@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Mon, 12 Oct 2026 03:05:49 -0400
+Subject: [PATCH] SRAM C goes to the display engine before the DE is used: out
+ of reset it is the CPU's (system control 0x03000004, bit 24), and while it
+ is, the DE's register window reads and writes SRAM, so mixer 0's clock and
+ reset setup was lost and the panel stayed blank. TrimUI's U-Boot hands it
+ over before the kernel; ours leaves the display alone, so disp_probe does it
+
+---
+ .../video/fbdev/sunxi/disp2/disp/dev_disp.c    | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/drivers/video/fbdev/sunxi/disp2/disp/dev_disp.c b/drivers/video/fbdev/sunxi/disp2/disp/dev_disp.c
+index d985ca0e1..ed208138f 100644
+--- a/drivers/video/fbdev/sunxi/disp2/disp/dev_disp.c
++++ b/drivers/video/fbdev/sunxi/disp2/disp/dev_disp.c
+@@ -2540,6 +2540,24 @@ static int disp_probe(struct platform_device *pdev)
+ 	g_disp_drv.dev = &pdev->dev;
+ 	pdev->dev.dma_mask = &disp_dmamask;
+ 
++#if defined(CONFIG_ARCH_SUN50IW10)
++	/*
++	 * SRAM C to the display engine. Out of reset it is the CPU's (system
++	 * control 0x03000004, bit 24), and while it is, the DE's registers
++	 * read and write SRAM: mixer 0 stayed in reset and the panel had no
++	 * picture. TrimUI's U-Boot hands it over before the kernel; ours
++	 * leaves the display alone, so it is done here, before the DE is used.
++	 */
++	{
++		void __iomem *sys = ioremap(0x03000004, 4);
++
++		if (sys) {
++			writel(readl(sys) & ~BIT(24), sys);
++			iounmap(sys);
++		}
++	}
++#endif
++
+ 	/* iomap */
+ 	/* de - [device(tcon-top)] - lcd0/1/2.. - dsi */
+ 	counter = 0;

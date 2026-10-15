@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Mon, 12 Oct 2026 12:11:00 -0400
+Subject: [PATCH] PWM: a channel's hardware polarity is set to the core's state
+ when it is taken. The core starts every channel at normal polarity and only
+ writes a polarity it thinks has changed, so asking for normal never reached
+ the hardware, which comes out of reset active low; a boot loader that set up
+ the backlight hid it, and without one the Brick's backlight ran inverted
+
+---
+ drivers/pwm/pwm-sunxi-group.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/pwm/pwm-sunxi-group.c b/drivers/pwm/pwm-sunxi-group.c
+index c0071c177..d75388fbf 100644
+--- a/drivers/pwm/pwm-sunxi-group.c
++++ b/drivers/pwm/pwm-sunxi-group.c
+@@ -1169,7 +1169,20 @@ static int sunxi_pwm_capture(struct pwm_chip *chip, struct pwm_device *pwm,
+ 	return 0;
+ }
+ 
++/*
++ * The PWM core starts every channel's state at normal polarity and only
++ * writes a polarity it thinks has changed, so asking for normal never reached
++ * the hardware, which comes out of reset active low. A boot loader that sets
++ * up the backlight hid it; with ours, the Brick's backlight ran inverted. The
++ * hardware is set to the core's state when a channel is taken.
++ */
++static int sunxi_pwm_request(struct pwm_chip *chip, struct pwm_device *pwm)
++{
++	return sunxi_pwm_set_polarity(chip, pwm, pwm->state.polarity);
++}
++
+ static struct pwm_ops sunxi_pwm_ops = {
++	.request = sunxi_pwm_request,
+ 	.config = sunxi_pwm_config,
+ 	.enable = sunxi_pwm_enable,
+ 	.disable = sunxi_pwm_disable,

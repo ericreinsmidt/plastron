@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Sat, 10 Oct 2026 22:50:43 -0400
+Subject: [PATCH] USB manager: with no power supply to ask whether a cable is
+ in (the AXP2202's power supply driver is not in the build), the cable is
+ taken as present instead of reading a NULL power supply and crashing the scan
+ thread, which left USB down for good
+
+---
+ drivers/usb/sunxi_usb/manager/usb_hw_scan.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/sunxi_usb/manager/usb_hw_scan.c b/drivers/usb/sunxi_usb/manager/usb_hw_scan.c
+index 55170fb29..d3ed7da87 100644
+--- a/drivers/usb/sunxi_usb/manager/usb_hw_scan.c
++++ b/drivers/usb/sunxi_usb/manager/usb_hw_scan.c
+@@ -188,8 +188,13 @@ static u32 get_detect_vbus_state(struct usb_scan_info *info)
+ 			else
+ 				det_vbus_state = USB_DET_VBUS_INVALID;
+ #elif defined(CONFIG_POWER_SUPPLY)
+-			power_supply_get_property(info->cfg->port.psy,
+-					POWER_SUPPLY_PROP_ONLINE, &temp);
++			/* No power supply to ask (its driver missing): take the
++			 * cable as present rather than dereference nothing */
++			if (!info->cfg->port.psy)
++				temp.intval = 1;
++			else
++				power_supply_get_property(info->cfg->port.psy,
++						POWER_SUPPLY_PROP_ONLINE, &temp);
+ 			if (temp.intval)
+ 				det_vbus_state = USB_DET_VBUS_VALID;
+ 			else

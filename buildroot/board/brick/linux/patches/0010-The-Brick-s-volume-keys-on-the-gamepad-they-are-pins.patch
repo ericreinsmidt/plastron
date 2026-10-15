@@ -1,0 +1,57 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Sun, 11 Oct 2026 01:39:48 -0400
+Subject: [PATCH] The Brick's volume keys on the gamepad: they are pins, PD20
+ and PD21, read like the other buttons, as buttons 13 and 14 where games'
+ software looks, with KEY_F1 and KEY_F2 declared as TrimUI's gamepad does to
+ hold 11 and 12. The device tree gives them to the LRADC keyboard, which never
+ reports a press on the Brick, on TrimUI's kernel either
+
+---
+ drivers/input/joystick/brick-pad.c | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/input/joystick/brick-pad.c b/drivers/input/joystick/brick-pad.c
+index 1008595af..1600f7688 100644
+--- a/drivers/input/joystick/brick-pad.c
++++ b/drivers/input/joystick/brick-pad.c
+@@ -2,13 +2,18 @@
+ /*
+  * The TrimUI Brick's buttons as a gamepad. TrimUI's own system reads them
+  * from userspace, from the pin registers, so its device tree has nothing for
+- * them; this reads the same 17 pins every 10 ms.
++ * them; this reads the same 19 pins every 10 ms, the volume keys among them.
+  *
+  * It reports what TrimUI's gamepad reports, so software written for it reads
+  * this one the same way: the buttons in evdev order (SDL numbers joystick
+  * buttons by code, B 0, A 1, Y 2, X 3, L1 4, R1 5, Select 6, Start 7, Menu 8,
+- * F1 9, F2 10), the d-pad as a hat, and L2 and R2 as axes, which keeps them
+- * out of that numbering. Volume is the LRADC keyboard's.
++ * F1 9, F2 10, volume down 13, volume up 14), the d-pad as a hat, and L2 and
++ * R2 as axes, which keeps them out of that numbering. KEY_F1 and KEY_F2 are
++ * declared as TrimUI's are and never come; they hold 11 and 12, so the volume
++ * keys land where games' software looks for them (SDL numbers the low keycodes
++ * after the gamepad's). The device tree gives the volume keys to the LRADC
++ * keyboard, but on the Brick it never reports a thing, on TrimUI's kernel
++ * either: they are pins.
+  *
+  * It also has an X and a Y axis that never move. SDL takes an input device
+  * for a joystick only when it has both, and the Brick has no stick, which is
+@@ -63,6 +68,8 @@ static const struct brick_button buttons[] = {
+ 	AXIS(PD(16), ABS_HAT0X,  1, "Right"),
+ 	AXIS(PB(2),  ABS_Z,      1, "L2"),
+ 	AXIS(PB(5),  ABS_RZ,     1, "R2"),
++	KEY(PD(20), KEY_VOLUMEDOWN, "Volume down"),
++	KEY(PD(21), KEY_VOLUMEUP,   "Volume up"),
+ };
+ 
+ static struct input_dev *pad;
+@@ -140,6 +147,8 @@ static int __init brick_pad_init(void)
+ 	for (i = 0; i < ARRAY_SIZE(buttons); i++)
+ 		if (buttons[i].type == EV_KEY)
+ 			input_set_capability(pad, EV_KEY, buttons[i].code);
++	input_set_capability(pad, EV_KEY, KEY_F1);
++	input_set_capability(pad, EV_KEY, KEY_F2);
+ 	input_set_abs_params(pad, ABS_X, -1, 1, 0, 0);
+ 	input_set_abs_params(pad, ABS_Y, -1, 1, 0, 0);
+ 	input_set_abs_params(pad, ABS_Z, 0, 1, 0, 0);

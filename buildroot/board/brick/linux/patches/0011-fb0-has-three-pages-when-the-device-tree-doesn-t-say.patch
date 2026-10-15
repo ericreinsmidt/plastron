@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Sun, 11 Oct 2026 01:39:48 -0400
+Subject: [PATCH] fb0 has three pages when the device tree doesn't say how
+ many, as the Brick's doesn't: one on screen, one waiting for the flip and one
+ being drawn. With two, a game drawing on one page while the screen shows the
+ other stays dark
+
+---
+ drivers/video/fbdev/sunxi/disp2/disp/dev_disp.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/video/fbdev/sunxi/disp2/disp/dev_disp.c b/drivers/video/fbdev/sunxi/disp2/disp/dev_disp.c
+index 5be81d5e9..d985ca0e1 100644
+--- a/drivers/video/fbdev/sunxi/disp2/disp/dev_disp.c
++++ b/drivers/video/fbdev/sunxi/disp2/disp/dev_disp.c
+@@ -1391,8 +1391,10 @@ static s32 parser_disp_init_para(const struct device_node *np,
+ 			init_para->using_device_config[1] = true;
+ 		}
+ #endif
+-	/* fb0 */
+-	init_para->buffer_num[0] = 2;
++	/* fb0: three pages when the device tree doesn't say, as the Brick's
++	 * doesn't: one on screen, one waiting for the flip, one being drawn.
++	 * TrimUI's kernel gives it at least that many; games flip through three */
++	init_para->buffer_num[0] = 3;
+ 	if (of_property_read_u32(np, "fb0_buffer_num", &value) == 0)
+ 		init_para->buffer_num[0] = value;
+ 

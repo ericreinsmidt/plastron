@@ -7,8 +7,7 @@ config BR2_PACKAGE_BRICK_KMODS
 	  the GPU's kernel driver (pvrsrvkm.ko, dc_sunxi.ko,
 	  Imagination's DDK 1.11 kernel half, dual MIT/GPL).
 
-	  Built outside Buildroot with the kernel they belong to
-	  (carapace, by its brick-spike/runtime/export-modules.sh) and
-	  taken from a folder mounted at /brick-modules (see the
-	  Makefile): the Brick's Allwinner 4.9 kernel builds with GCC 10,
-	  not this toolchain's.
+	  Built outside Buildroot with the kernel they belong to, by make
+	  brick-kernel (scripts/build-brick-kernel.sh), and taken from its
+	  output in the build volume: the Brick's Allwinner 4.9 kernel
+	  builds with GCC 10, not this toolchain's.

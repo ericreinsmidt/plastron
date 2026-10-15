@@ -1,0 +1,158 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Mon, 12 Oct 2026 22:23:52 -0400
+Subject: [PATCH] The Brick's jd9168 panel powers up in 0.34 s where TrimUI's
+ waits took 0.88, timed on a Brick with a camera on its screen, warm and cold:
+ its reset 10, 5, 10 and 20 ms (TrimUI's 50, 20, 120, 20), 20 ms after
+ sleep-out (120), 10 after display-on (50), 10 before the display controller
+ starts (60) and 20 after (50). The first power-up, which only reads the ID,
+ uses the short reset too, and a panel that doesn't answer it is powered up
+ again with TrimUI's waits and asked again; the five panels not yet tried on a
+ Brick keep TrimUI's waits otherwise. The second power-up stays for every
+ panel: without it the jd9168 lit to a dark screen, the display's interrupts
+ never running
+
+---
+ .../fbdev/sunxi/disp2/disp/lcd/brick_panel.c  | 56 +++++++++++++++----
+ 1 file changed, 46 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/video/fbdev/sunxi/disp2/disp/lcd/brick_panel.c b/drivers/video/fbdev/sunxi/disp2/disp/lcd/brick_panel.c
+index 155af921c..67bd6c212 100644
+--- a/drivers/video/fbdev/sunxi/disp2/disp/lcd/brick_panel.c
++++ b/drivers/video/fbdev/sunxi/disp2/disp/lcd/brick_panel.c
+@@ -10,6 +10,13 @@
+  * panel that answers with none of the six IDs gets the JD9168's commands, as
+  * there.
+  *
++ * Except where a panel has been timed on a Brick (quick below): its
++ * power-ups get shorter waits. The first power-up, which only reads the ID,
++ * uses the shorter waits too; a panel that doesn't answer them is powered up
++ * again with TrimUI's and asked again. The second power-up stays, for every
++ * panel: without it a jd9168 lit to a dark screen, the display's interrupts
++ * never running (tried 2026-10-12).
++ *
+  * Registered as "otm1289a", the name TrimUI's device tree gives lcd0 on
+  * every Brick whatever its panel. TrimUI's U-Boot lit the panel and said so
+  * in the device tree (boot_disp, boot_fb0), and the kernel then left it
+@@ -75,9 +82,9 @@ static const u8 jd9168_init[] = {
+ 	1, 0xde, 0x00,
+ 	1, 0x35, 0x00,
+ 	0, 0x11,
+-	DELAY, 120,
++	DELAY, 20,	/* TrimUI's 120; 20 on a Brick, 2026-10-12 */
+ 	0, 0x29,
+-	DELAY, 50,
++	DELAY, 10,	/* TrimUI's 50 */
+ 	END
+ };
+ 
+@@ -521,10 +528,12 @@ static const u8 gc9702c_init[] = {
+ struct brick_panel {
+ 	const char *name;
+ 	const u8 *init;
++	/* Timed on a Brick with this panel: the shorter waits */
++	bool quick;
+ };
+ 
+ static const struct brick_panel brick_panels[] = {
+-	{ "jd9168", jd9168_init },
++	{ "jd9168", jd9168_init, true },	/* 2026-10-12 */
+ 	{ "otm1289a", otm1289a_init },
+ 	{ "st7703", st7703_init },
+ 	{ "nv3052", nv3052_init },
+@@ -534,6 +543,8 @@ static const struct brick_panel brick_panels[] = {
+ 
+ /* What answered the ID read, kept so a second open skips the read. */
+ static const struct brick_panel *found;
++/* TrimUI's waits from now on: the panel didn't answer the shorter ones */
++static bool slow;
+ 
+ static void LCD_power_on(u32 sel);
+ static void LCD_power_off(u32 sel);
+@@ -541,6 +552,7 @@ static void LCD_bl_open(u32 sel);
+ static void LCD_bl_close(u32 sel);
+ static void LCD_panel_init(u32 sel);
+ static void LCD_panel_exit(u32 sel);
++static void LCD_tcon_enable(u32 sel);
+ 
+ #define panel_reset(sel, val) sunxi_lcd_gpio_set_value(sel, 0, val)
+ 
+@@ -548,11 +560,18 @@ static void LCD_cfg_panel_info(struct panel_extend_para *info)
+ {
+ }
+ 
++/* The display controller on, then TrimUI's 50 ms, or 20 on a quick panel */
++static void LCD_tcon_enable(u32 sel)
++{
++	sunxi_lcd_tcon_enable(sel);
++	sunxi_lcd_delay_ms(found && found->quick && !slow ? 20 : 50);
++}
++
+ static s32 LCD_open_flow(u32 sel)
+ {
+ 	LCD_OPEN_FUNC(sel, LCD_power_on, 10);
+-	LCD_OPEN_FUNC(sel, LCD_panel_init, 60);
+-	LCD_OPEN_FUNC(sel, sunxi_lcd_tcon_enable, 50);
++	LCD_OPEN_FUNC(sel, LCD_panel_init, 0);
++	LCD_OPEN_FUNC(sel, LCD_tcon_enable, 0);
+ 	LCD_OPEN_FUNC(sel, LCD_bl_open, 0);
+ 	return 0;
+ }
+@@ -566,19 +585,25 @@ static s32 LCD_close_flow(u32 sel)
+ 	return 0;
+ }
+ 
+-/* lcd_power0 is CLDO1 and lcd_power1 CLDO4; the reset is lcd_gpio_0, PD22 */
++/*
++ * lcd_power0 is CLDO1 and lcd_power1 CLDO4; the reset is lcd_gpio_0, PD22.
++ * TrimUI's waits are 50, 20, 120 and 20 ms; the quick ones, before the ID is
++ * known and on a panel timed on a Brick, 10, 5, 10 and 20.
++ */
+ static void LCD_power_on(u32 sel)
+ {
++	bool quick = !slow && (!found || found->quick);
++
+ 	sunxi_lcd_power_enable(sel, 0);
+ 	sunxi_lcd_delay_ms(10);
+ 	sunxi_lcd_power_enable(sel, 1);
+ 	sunxi_lcd_delay_ms(10);
+ 	sunxi_lcd_pin_cfg(sel, 1);
+-	sunxi_lcd_delay_ms(50);
++	sunxi_lcd_delay_ms(quick ? 10 : 50);
+ 	panel_reset(sel, 1);
+-	sunxi_lcd_delay_ms(20);
++	sunxi_lcd_delay_ms(quick ? 5 : 20);
+ 	panel_reset(sel, 0);
+-	sunxi_lcd_delay_ms(120);
++	sunxi_lcd_delay_ms(quick ? 10 : 120);
+ 	panel_reset(sel, 1);
+ 	sunxi_lcd_delay_ms(20);
+ }
+@@ -666,8 +691,17 @@ static void LCD_panel_init(u32 sel)
+ 	sunxi_lcd_dsi_clk_enable(sel);
+ 	if (!found) {
+ 		found = identify(sel);
++		if (!found) {
++			/* The shorter waits too short for it, perhaps */
++			slow = true;
++			LCD_power_off(sel);
++			LCD_power_on(sel);
++			sunxi_lcd_dsi_clk_enable(sel);
++			found = identify(sel);
++		}
+ 		if (found)
+-			pr_info("brick panel: %s\n", found->name);
++			pr_info("brick panel: %s%s\n", found->name,
++				slow ? ", with TrimUI's waits" : "");
+ 		else {
+ 			pr_info("brick panel: unknown, sending jd9168's\n");
+ 			found = &brick_panels[0];
+@@ -687,6 +721,8 @@ static void LCD_panel_init(u32 sel)
+ 			p += 2 + p[0];
+ 		}
+ 	}
++	/* TrimUI's 60 ms before the display controller starts, 10 on a quick panel */
++	sunxi_lcd_delay_ms(found->quick && !slow ? 10 : 60);
+ }
+ 
+ static void LCD_panel_exit(u32 sel)

@@ -1,0 +1,116 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Mon, 12 Oct 2026 14:51:16 -0400
+Subject: [PATCH] The AXP2202's USB input, set up as TrimUI's kernel does (its
+ axp2202_usb_power.c, absent from this tree; the sequence follows X-Powers'
+ 4.9 copy): the input voltage limit, BC1.2 off, the boost's voltage and the
+ Type-C logic, all from the device tree's USB node. A full power-down resets
+ the Type-C registers (0xe3 back to 0x11, its clock off in 0x0b bit 3, without
+ which writes to them are ignored), and with nothing setting them again the CC
+ pins never asked for power: no charger or computer gave the Brick any, and it
+ ran down with the cable in. The input current limit comes from the USB node
+ too: read from the battery node it came out as 0, 100 mA. Now
+ 0x0b/0xe3/0x16/0x17/0x1f match TrimUI's (0d/13/01/88/03) and it charges
+
+---
+ drivers/power/supply/axp2202_charger.c | 73 ++++++++++++++++++++++----
+ 1 file changed, 62 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/power/supply/axp2202_charger.c b/drivers/power/supply/axp2202_charger.c
+index 2da2c1f8f..579857b0c 100644
+--- a/drivers/power/supply/axp2202_charger.c
++++ b/drivers/power/supply/axp2202_charger.c
+@@ -1009,6 +1009,67 @@ do {\
+ 		axp_config->name = def_value;\
+ } while (0)
+ 
++/*
++ * The USB input, which TrimUI's kernel sets up in a separate driver
++ * (axp2202_usb_power.c, not in this tree; the init below follows Allwinner's
++ * 4.9 copy of it) from the device tree's USB node. Without it the AXP2202's
++ * Type-C logic stays off after the PMIC has been powered down: the CC pins
++ * never ask the charger or computer for power, VBUS never arrives, and the
++ * Brick ran on its battery with the cable in. The input current limit is the
++ * USB node's too: read from the battery node it came out as 0, the minimum,
++ * 100 mA.
++ */
++static void axp2202_usb_input_init(struct axp2202_device_info *di)
++{
++	struct device_node *np;
++	struct regmap *regmap = di->regmap;
++	u32 usbpc_cur = 500, usbad_vol = 4600, bc12_en = 0, boost_vol = 5126;
++	u32 typec_used = 0, data;
++
++	np = of_find_compatible_node(NULL, NULL,
++				     "x-powers,axp2202-usb-power-supply");
++	if (np) {
++		of_property_read_u32(np, "pmu_usbpc_cur", &usbpc_cur);
++		of_property_read_u32(np, "pmu_usbad_vol", &usbad_vol);
++		of_property_read_u32(np, "pmu_bc12_en", &bc12_en);
++		of_property_read_u32(np, "pmu_boost_vol", &boost_vol);
++		of_property_read_u32(np, "pmu_usb_typec_used", &typec_used);
++		of_node_put(np);
++	}
++
++	/* The input voltage limit: 3.88 V plus 80 mV a step */
++	data = (clamp_val(usbad_vol, 3880, 5080) - 3880) / 80;
++	regmap_update_bits(regmap, AXP2202_VIMDPM_CFG, GENMASK(3, 0), data);
++
++	/* BC1.2 detection, and the input current limit's own setting with it */
++	if (bc12_en) {
++		regmap_update_bits(regmap, AXP2202_CLK_EN, BIT(4), BIT(4));
++		regmap_update_bits(regmap, AXP2202_IIN_LIM, BIT(7), 0);
++	} else {
++		regmap_update_bits(regmap, AXP2202_CLK_EN, BIT(4), 0);
++		regmap_update_bits(regmap, AXP2202_IIN_LIM, BIT(7), BIT(7));
++	}
++
++	/* 150 mA plus 50 mA a step, 0 meaning 100 mA */
++	usbpc_cur = clamp_val(usbpc_cur, 100, 3250);
++	data = usbpc_cur < 150 ? 0 : (usbpc_cur - 150) / 50 + 1;
++	regmap_update_bits(regmap, AXP2202_IIN_LIM, GENMASK(5, 0), data);
++
++	/* The boost's voltage, for when the port supplies power instead */
++	data = (clamp_val(boost_vol, 4550, 5510) - 4550) / 64;
++	regmap_update_bits(regmap, AXP2202_BST_CFG0, GENMASK(7, 4), data << 4);
++	regmap_write(regmap, AXP2202_BST_CFG1, 0x03);
++
++	/* Type-C: its clock first, as its registers ignore writes without it */
++	if (typec_used) {
++		regmap_update_bits(regmap, AXP2202_CLK_EN, BIT(3), BIT(3));
++		regmap_update_bits(regmap, AXP2202_CC_GLB_CTRL, BIT(2), 0);
++		regmap_update_bits(regmap, AXP2202_CC_GLB_CTRL, BIT(5), BIT(5));
++		regmap_update_bits(regmap, AXP2202_CC_MODE_CTRL, BIT(1), BIT(1));
++		regmap_update_bits(regmap, AXP2202_CC_MODE_CTRL, BIT(0), BIT(0));
++	}
++}
++
+ int axp2202_charger_dt_parse(struct device_node *node,
+ 			 struct axp2202_dts_config *axp_config)
+ {
+@@ -1111,17 +1172,6 @@ static void axp2202_parse_device_tree(struct axp2202_device_info *di)
+ 		regmap_update_bits(di->regmap, AXP2202_CHGLED_CFG, 0x01, 0x00);
+ 	}
+ 
+-	prop = di->dts_info.pmu_usbpc_cur;
+-	if (!of_property_read_u32(di->dev->of_node, "iin_limit", &prop) ||
+-	    true) {
+-
+-		prop = clamp_val(prop, 100, 3250);
+-		prop = prop < 150 ? 0 : (prop - 150) / 50 + 1;
+-
+-		regmap_update_bits(di->regmap, AXP2202_IIN_LIM, GENMASK(5, 0),
+-				   prop);
+-	}
+-
+ 	prop = di->dts_info.pmu_runtime_chgcur;
+ 	if (!of_property_read_u32(di->dev->of_node, "icc_cfg", &prop) || true) {
+ 		prop = clamp_val(prop, 0, 3072);
+@@ -1268,6 +1318,7 @@ static int axp2202_charger_probe(struct platform_device *pdev)
+ 		ret = -ENODEV;
+ 		goto err;
+ 	}
++	axp2202_usb_input_init(di);
+ 
+ 	ret = axp2202_register_battery(di);
+ 	if (ret < 0) {

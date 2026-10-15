@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Sat, 10 Oct 2026 22:50:43 -0400
+Subject: [PATCH] AXP2202: the regulator and power key drivers answer to the
+ axp2202 names the PMIC driver gives their devices, as well as axp2101; the
+ board device tree gives the regulators node no compatible to match on, so the
+ regulators and the power key never came up and nothing could switch the SD
+ card's power on
+
+---
+ drivers/input/misc/axp2101-pek.c      | 9 +++++++++
+ drivers/regulator/axp2101-regulator.c | 9 +++++++++
+ 2 files changed, 18 insertions(+)
+
+diff --git a/drivers/input/misc/axp2101-pek.c b/drivers/input/misc/axp2101-pek.c
+index 8ceeb36b8..4107002c9 100644
+--- a/drivers/input/misc/axp2101-pek.c
++++ b/drivers/input/misc/axp2101-pek.c
+@@ -947,8 +947,17 @@ static struct of_device_id axp_match_table[] = {
+ 	{ /* sentinel */ },
+ };
+ 
++/* As the regulators: the AXP2202 cell is named axp2202-pek, and the board
++ * device tree calls the node axp2101-pek, so match on either name */
++static const struct platform_device_id axp20x_pek_names[] = {
++	{ "axp2101-pek", 0 },
++	{ "axp2202-pek", 0 },
++	{ /* sentinel */ },
++};
++
+ static struct platform_driver axp20x_pek_driver = {
+ 	.probe		= axp20x_pek_probe,
++	.id_table	= axp20x_pek_names,
+ 	.driver		= {
+ 		.of_match_table = axp_match_table,
+ 		.name = "axp2101-pek",
+diff --git a/drivers/regulator/axp2101-regulator.c b/drivers/regulator/axp2101-regulator.c
+index 3afd8795d..18efaec2c 100644
+--- a/drivers/regulator/axp2101-regulator.c
++++ b/drivers/regulator/axp2101-regulator.c
+@@ -1223,8 +1223,17 @@ static struct of_device_id axp_regulator_id_tab[] = {
+ 	{ /* sentinel */ },
+ };
+ 
++/* The AXP2202 cell is named axp2202-regulator, and the board device tree
++ * gives the regulators node no compatible to match on: answer to the name */
++static const struct platform_device_id axp2101_regulator_names[] = {
++	{ "axp2101-regulator", 0 },
++	{ "axp2202-regulator", 0 },
++	{ /* sentinel */ },
++};
++
+ static struct platform_driver axp2101_regulator_driver = {
+ 	.probe	= axp2101_regulator_probe,
++	.id_table = axp2101_regulator_names,
+ 	.driver	= {
+ 		.of_match_table = axp_regulator_id_tab,
+ 		.name		= "axp2101-regulator",

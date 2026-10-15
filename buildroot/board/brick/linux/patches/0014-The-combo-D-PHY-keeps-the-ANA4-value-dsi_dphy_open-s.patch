@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Mon, 12 Oct 2026 03:05:48 -0400
+Subject: [PATCH] The combo D-PHY keeps the ANA4 value dsi_dphy_open sets
+ (0x844635ee, as under TrimUI's boot): dsi_io_open wrote a fixed 0x844631ff
+ after it, a Sonic Pad setting that changes the high-speed lanes' drive and
+ the clock lane's termination, and the Brick's panel took its commands but
+ showed no picture. The fixed value is kept for the older D-PHY
+
+---
+ .../video/fbdev/sunxi/disp2/disp/de/lowlevel_v2x/de_dsi.c  | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/video/fbdev/sunxi/disp2/disp/de/lowlevel_v2x/de_dsi.c b/drivers/video/fbdev/sunxi/disp2/disp/de/lowlevel_v2x/de_dsi.c
+index 333f800b1..1e583123b 100644
+--- a/drivers/video/fbdev/sunxi/disp2/disp/de/lowlevel_v2x/de_dsi.c
++++ b/drivers/video/fbdev/sunxi/disp2/disp/de/lowlevel_v2x/de_dsi.c
+@@ -841,9 +841,14 @@ u32 dsi_io_open(u32 sel, struct disp_panel_para *panel)
+ 	dphy_dev[sel]->dphy_ana2.bits.enp2s_cpu =
+ 	    dsi_lane_den[panel->lcd_dsi_lane - 1];
+ 
+-#endif
+ 	/*modify the ANA4 reg, set vlv to 1*/
+ 	dphy_dev[sel]->dphy_ana4.dwval = 0x844631ff;
++#endif
++	/*
++	 * Not on the combo D-PHY: there the value dsi_dphy_open sets stands
++	 * (0x844635ee), as it does under TrimUI's boot. Written over with
++	 * this one, the Brick's panel took commands but showed no picture.
++	 */
+ 
+ 	return 0;
+ }

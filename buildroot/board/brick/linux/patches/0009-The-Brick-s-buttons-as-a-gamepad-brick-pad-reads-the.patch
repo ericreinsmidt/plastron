@@ -1,0 +1,239 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Sun, 11 Oct 2026 00:21:23 -0400
+Subject: [PATCH] The Brick's buttons as a gamepad: brick-pad reads the 17 pins
+ every 10 ms and reports what TrimUI's gamepad does, the buttons in its order,
+ the d-pad as a hat and L2 and R2 as axes, plus an X and a Y that never move,
+ since SDL takes a device for a joystick only when it has both. A module in
+ brick_defconfig, so it can load after the volume keys, the power key and the
+ headphone jack, which keep their event numbers
+
+---
+ arch/arm64/configs/brick_defconfig |   1 +
+ drivers/input/joystick/Kconfig     |  10 ++
+ drivers/input/joystick/Makefile    |   1 +
+ drivers/input/joystick/brick-pad.c | 172 +++++++++++++++++++++++++++++
+ 4 files changed, 184 insertions(+)
+ create mode 100644 drivers/input/joystick/brick-pad.c
+
+diff --git a/arch/arm64/configs/brick_defconfig b/arch/arm64/configs/brick_defconfig
+index 32abc34f7..3a941de2a 100644
+--- a/arch/arm64/configs/brick_defconfig
++++ b/arch/arm64/configs/brick_defconfig
+@@ -195,6 +195,7 @@ CONFIG_KEYBOARD_SUNXI=y
+ # CONFIG_INPUT_MOUSE is not set
+ CONFIG_INPUT_JOYSTICK=y
+ CONFIG_JOYSTICK_ANALOG=y
++CONFIG_JOYSTICK_BRICK_PAD=m
+ CONFIG_JOYSTICK_XPAD=y
+ CONFIG_JOYSTICK_XPAD_FF=y
+ CONFIG_JOYSTICK_XPAD_LEDS=y
+diff --git a/drivers/input/joystick/Kconfig b/drivers/input/joystick/Kconfig
+index 4215b5382..200d5983d 100644
+--- a/drivers/input/joystick/Kconfig
++++ b/drivers/input/joystick/Kconfig
+@@ -330,4 +330,14 @@ config JOYSTICK_MAPLE
+ 	  To compile this as a module choose M here: the module will be called
+ 	  maplecontrol.
+ 
++config JOYSTICK_BRICK_PAD
++	tristate "TrimUI Brick buttons"
++	depends on GPIOLIB && ARCH_SUNXI
++	help
++	  Say Y or M here for the TrimUI Brick's buttons, d-pad and
++	  triggers as a gamepad, read from their pins.
++
++	  To compile this driver as a module, choose M here: the
++	  module will be called brick-pad.
++
+ endif
+diff --git a/drivers/input/joystick/Makefile b/drivers/input/joystick/Makefile
+index 92dc0de9d..670ed6c9d 100644
+--- a/drivers/input/joystick/Makefile
++++ b/drivers/input/joystick/Makefile
+@@ -7,6 +7,7 @@
+ obj-$(CONFIG_JOYSTICK_A3D)		+= a3d.o
+ obj-$(CONFIG_JOYSTICK_ADI)		+= adi.o
+ obj-$(CONFIG_JOYSTICK_AMIGA)		+= amijoy.o
++obj-$(CONFIG_JOYSTICK_BRICK_PAD)	+= brick-pad.o
+ obj-$(CONFIG_JOYSTICK_AS5011)		+= as5011.o
+ obj-$(CONFIG_JOYSTICK_ANALOG)		+= analog.o
+ obj-$(CONFIG_JOYSTICK_COBRA)		+= cobra.o
+diff --git a/drivers/input/joystick/brick-pad.c b/drivers/input/joystick/brick-pad.c
+new file mode 100644
+index 000000000..1008595af
+--- /dev/null
++++ b/drivers/input/joystick/brick-pad.c
+@@ -0,0 +1,172 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * The TrimUI Brick's buttons as a gamepad. TrimUI's own system reads them
++ * from userspace, from the pin registers, so its device tree has nothing for
++ * them; this reads the same 17 pins every 10 ms.
++ *
++ * It reports what TrimUI's gamepad reports, so software written for it reads
++ * this one the same way: the buttons in evdev order (SDL numbers joystick
++ * buttons by code, B 0, A 1, Y 2, X 3, L1 4, R1 5, Select 6, Start 7, Menu 8,
++ * F1 9, F2 10), the d-pad as a hat, and L2 and R2 as axes, which keeps them
++ * out of that numbering. Volume is the LRADC keyboard's.
++ *
++ * It also has an X and a Y axis that never move. SDL takes an input device
++ * for a joystick only when it has both, and the Brick has no stick, which is
++ * why this isn't gpio-keys-polled: that driver can only report what a pin is
++ * behind.
++ *
++ * The buttons pull the pins low; the pull-ups are set here, as no pinctrl
++ * state covers these pins yet.
++ */
++#include <linux/gpio.h>
++#include <linux/input.h>
++#include <linux/io.h>
++#include <linux/module.h>
++#include <linux/workqueue.h>
++
++#define PIO_BASE	0x0300b000
++#define PIO_BANK_SIZE	0x24
++#define PIO_PULL0	0x1c
++
++#define POLL_MS		10
++
++/* sunxi GPIO numbers: bank * 32 + pin, PB = 1, PD = 3, PH = 7 */
++#define PB(n) (1 * 32 + (n))
++#define PD(n) (3 * 32 + (n))
++#define PH(n) (7 * 32 + (n))
++
++struct brick_button {
++	int gpio;
++	unsigned int type, code;
++	int value;		/* an axis's value while held */
++	const char *name;
++};
++
++#define KEY(pin, c, n)		{ pin, EV_KEY, c, 1, n }
++#define AXIS(pin, c, v, n)	{ pin, EV_ABS, c, v, n }
++
++static const struct brick_button buttons[] = {
++	KEY(PD(13), BTN_SOUTH,  "B"),
++	KEY(PD(12), BTN_EAST,   "A"),
++	KEY(PD(19), BTN_NORTH,  "Y"),
++	KEY(PD(18), BTN_WEST,   "X"),
++	KEY(PB(4),  BTN_TL,     "L1"),
++	KEY(PH(17), BTN_TR,     "R1"),
++	KEY(PH(15), BTN_SELECT, "Select"),
++	KEY(PH(16), BTN_START,  "Start"),
++	KEY(PH(14), BTN_MODE,   "Menu"),
++	KEY(PH(12), BTN_THUMBL, "F1"),
++	KEY(PH(13), BTN_THUMBR, "F2"),
++	AXIS(PD(17), ABS_HAT0Y, -1, "Up"),
++	AXIS(PD(14), ABS_HAT0Y,  1, "Down"),
++	AXIS(PD(15), ABS_HAT0X, -1, "Left"),
++	AXIS(PD(16), ABS_HAT0X,  1, "Right"),
++	AXIS(PB(2),  ABS_Z,      1, "L2"),
++	AXIS(PB(5),  ABS_RZ,     1, "R2"),
++};
++
++static struct input_dev *pad;
++static struct delayed_work poll_work;
++
++static void brick_pad_poll(struct work_struct *work)
++{
++	int axis[ABS_CNT] = { 0 };
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
++		const struct brick_button *b = &buttons[i];
++		bool held = !gpio_get_value(b->gpio);
++
++		if (b->type == EV_KEY)
++			input_report_key(pad, b->code, held);
++		else if (held)
++			axis[b->code] += b->value;	/* both ways at once is centered */
++	}
++	input_report_abs(pad, ABS_HAT0X, axis[ABS_HAT0X]);
++	input_report_abs(pad, ABS_HAT0Y, axis[ABS_HAT0Y]);
++	input_report_abs(pad, ABS_Z, axis[ABS_Z]);
++	input_report_abs(pad, ABS_RZ, axis[ABS_RZ]);
++	input_sync(pad);
++
++	schedule_delayed_work(&poll_work, msecs_to_jiffies(POLL_MS));
++}
++
++/* Pull-up, 01 in the pin's two bits of its bank's pull register */
++static void brick_pad_pullups(void)
++{
++	void __iomem *pio = ioremap(PIO_BASE, 0x400);
++	int i;
++
++	if (!pio)
++		return;
++	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
++		int bank = buttons[i].gpio / 32, pin = buttons[i].gpio % 32;
++		void __iomem *reg = pio + bank * PIO_BANK_SIZE + PIO_PULL0 + (pin / 16) * 4;
++		int shift = (pin % 16) * 2;
++
++		writel((readl(reg) & ~(3 << shift)) | (1 << shift), reg);
++	}
++	iounmap(pio);
++}
++
++static void brick_pad_free_gpios(int count)
++{
++	while (count--)
++		gpio_free(buttons[count].gpio);
++}
++
++static int __init brick_pad_init(void)
++{
++	int i, err;
++
++	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
++		err = gpio_request_one(buttons[i].gpio, GPIOF_IN, buttons[i].name);
++		if (err) {
++			pr_err("brick-pad: pin %d (%s): %d\n", buttons[i].gpio, buttons[i].name, err);
++			brick_pad_free_gpios(i);
++			return err;
++		}
++	}
++	brick_pad_pullups();
++
++	pad = input_allocate_device();
++	if (!pad) {
++		brick_pad_free_gpios(ARRAY_SIZE(buttons));
++		return -ENOMEM;
++	}
++	pad->name = "Brick Gamepad";
++	pad->phys = "brick-pad/input0";
++	pad->id.bustype = BUS_HOST;
++	for (i = 0; i < ARRAY_SIZE(buttons); i++)
++		if (buttons[i].type == EV_KEY)
++			input_set_capability(pad, EV_KEY, buttons[i].code);
++	input_set_abs_params(pad, ABS_X, -1, 1, 0, 0);
++	input_set_abs_params(pad, ABS_Y, -1, 1, 0, 0);
++	input_set_abs_params(pad, ABS_Z, 0, 1, 0, 0);
++	input_set_abs_params(pad, ABS_RZ, 0, 1, 0, 0);
++	input_set_abs_params(pad, ABS_HAT0X, -1, 1, 0, 0);
++	input_set_abs_params(pad, ABS_HAT0Y, -1, 1, 0, 0);
++
++	err = input_register_device(pad);
++	if (err) {
++		input_free_device(pad);
++		brick_pad_free_gpios(ARRAY_SIZE(buttons));
++		return err;
++	}
++
++	INIT_DELAYED_WORK(&poll_work, brick_pad_poll);
++	schedule_delayed_work(&poll_work, 0);
++	return 0;
++}
++
++static void __exit brick_pad_exit(void)
++{
++	cancel_delayed_work_sync(&poll_work);
++	input_unregister_device(pad);
++	brick_pad_free_gpios(ARRAY_SIZE(buttons));
++}
++
++module_init(brick_pad_init);
++module_exit(brick_pad_exit);
++MODULE_DESCRIPTION("TrimUI Brick buttons as a gamepad");
++MODULE_LICENSE("GPL");

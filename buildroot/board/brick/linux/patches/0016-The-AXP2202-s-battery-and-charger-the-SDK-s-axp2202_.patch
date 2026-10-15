@@ -1,0 +1,113 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Mon, 12 Oct 2026 03:39:29 -0400
+Subject: [PATCH] The AXP2202's battery and charger: the SDK's
+ axp2202_charger.c in the build (CONFIG_AXP2202_POWER, on in brick_defconfig),
+ its supplies named as TrimUI's kernel names them (axp2202-battery,
+ axp2202-usb, axp2202-ac), which software for the Brick reads. The MFD's cell
+ for it had a dot for a comma in its compatible and matched no node, so the
+ charger ran on its defaults, among them a 4.0 V charge for a 4.2 V battery;
+ it now takes the battery node, with the capacity, currents and gauge model
+ from the device tree
+
+---
+ arch/arm64/configs/brick_defconfig     | 1 +
+ drivers/mfd/axp2101.c                  | 8 +++++++-
+ drivers/power/supply/Kconfig           | 7 +++++++
+ drivers/power/supply/Makefile          | 1 +
+ drivers/power/supply/axp2202_charger.c | 7 ++++---
+ 5 files changed, 20 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/configs/brick_defconfig b/arch/arm64/configs/brick_defconfig
+index 008ed81b7..70cf454a7 100644
+--- a/arch/arm64/configs/brick_defconfig
++++ b/arch/arm64/configs/brick_defconfig
+@@ -231,6 +231,7 @@ CONFIG_GPIO_SYSFS=y
+ CONFIG_GPIO_SUNXI=y
+ CONFIG_GPIO_GENERIC_PLATFORM=y
+ CONFIG_AXP803_POWER=y
++CONFIG_AXP2202_POWER=y
+ CONFIG_THERMAL=y
+ # CONFIG_THERMAL_HWMON is not set
+ CONFIG_THERMAL_WRITABLE_TRIPS=y
+diff --git a/drivers/mfd/axp2101.c b/drivers/mfd/axp2101.c
+index 0b15e526b..d26f32e0b 100644
+--- a/drivers/mfd/axp2101.c
++++ b/drivers/mfd/axp2101.c
+@@ -2304,7 +2304,13 @@ static struct mfd_cell axp2202_cells[] = {
+ 	},
+ 	{
+ 		.name = "axp2202-power-supply",
+-		.of_compatible = "x-powers.axp2202-power-supply",
++		/*
++		 * The battery node, which holds what the charger reads (pmu_*,
++		 * the gauge's param). Was "x-powers.axp2202-power-supply", a dot
++		 * for a comma, which matched no node, so the charger fell back to
++		 * defaults: among them a 4.0 V charge for a 4.2 V battery.
++		 */
++		.of_compatible = "x-powers,axp2202-bat-power-supply",
+ 		.resources = axp2202_ps_resources,
+ 		.num_resources = ARRAY_SIZE(axp2202_ps_resources),
+ 	},
+diff --git a/drivers/power/supply/Kconfig b/drivers/power/supply/Kconfig
+index 6a4e69069..fae517ec9 100644
+--- a/drivers/power/supply/Kconfig
++++ b/drivers/power/supply/Kconfig
+@@ -636,6 +636,13 @@ config AXP20X_POWER
+ 	  This driver provides support for the power supply features of
+ 	  AXP20x PMIC.
+ 
++config AXP2202_POWER
++	tristate "AXP2202 power supply driver"
++	depends on MFD_AXP2101
++	help
++	  The AXP2202's battery, charger and USB input, as power supplies
++	  named axp2202-battery and axp2202-usb.
++
+ config AXP2101_POWER
+ 	tristate "AXP2101 power supply driver"
+ 	depends on MFD_AXP2101
+diff --git a/drivers/power/supply/Makefile b/drivers/power/supply/Makefile
+index 63a9c237e..0e59cc5da 100644
+--- a/drivers/power/supply/Makefile
++++ b/drivers/power/supply/Makefile
+@@ -11,6 +11,7 @@ obj-$(CONFIG_PDA_POWER)		+= pda_power.o
+ obj-$(CONFIG_APM_POWER)		+= apm_power.o
+ obj-$(CONFIG_AXP20X_POWER)	+= axp20x_usb_power.o
+ obj-$(CONFIG_AXP2101_POWER)	+= axp2101_charger.o
++obj-$(CONFIG_AXP2202_POWER)	+= axp2202_charger.o
+ obj-$(CONFIG_AXP152_VBUS_POWER)	+= axp152_vbus_power.o
+ obj-$(CONFIG_AXP803_POWER)	+= axp803_usb_power.o
+ obj-$(CONFIG_AXP803_POWER)	+= axp803_ac_power.o
+diff --git a/drivers/power/supply/axp2202_charger.c b/drivers/power/supply/axp2202_charger.c
+index fdacd3049..c3d2f8054 100644
+--- a/drivers/power/supply/axp2202_charger.c
++++ b/drivers/power/supply/axp2202_charger.c
+@@ -745,7 +745,8 @@ static int axp2202_register_battery(struct axp2202_device_info *di)
+ 	if (!psy_desc)
+ 		return -ENOMEM;
+ 
+-	psy_desc->name = "battery";
++	/* The names TrimUI's kernel gives them, which software for the Brick reads */
++	psy_desc->name = "axp2202-battery";
+ 	psy_desc->type = POWER_SUPPLY_TYPE_BATTERY;
+ 	psy_desc->properties = axp2202_props;
+ 	psy_desc->num_properties = ARRAY_SIZE(axp2202_props);
+@@ -766,7 +767,7 @@ static int axp2202_register_battery(struct axp2202_device_info *di)
+ 		goto err1;
+ 	}
+ 
+-	usb_desc->name = "usb";
++	usb_desc->name = "axp2202-usb";
+ 	usb_desc->type = POWER_SUPPLY_TYPE_USB;
+ 	usb_desc->properties = axp2202_usb_ac_props;
+ 	usb_desc->num_properties = ARRAY_SIZE(axp2202_usb_ac_props);
+@@ -787,7 +788,7 @@ static int axp2202_register_battery(struct axp2202_device_info *di)
+ 		goto err2;
+ 	}
+ 
+-	ac_desc->name = "ac";
++	ac_desc->name = "axp2202-ac";
+ 	ac_desc->type = POWER_SUPPLY_TYPE_MAINS;
+ 	ac_desc->properties = axp2202_usb_ac_props;
+ 	ac_desc->num_properties = ARRAY_SIZE(axp2202_usb_ac_props);

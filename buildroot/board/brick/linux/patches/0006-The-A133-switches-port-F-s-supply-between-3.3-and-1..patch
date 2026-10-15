@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Sat, 10 Oct 2026 22:50:44 -0400
+Subject: [PATCH] The A133 switches port F's supply between 3.3 and 1.8 V: the
+ supply select register at 0x350 was only built for three other chips, so the
+ SD card's bank could change its pads' mode but never its voltage
+
+---
+ drivers/pinctrl/sunxi/pinctrl-sunxi.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/pinctrl/sunxi/pinctrl-sunxi.h b/drivers/pinctrl/sunxi/pinctrl-sunxi.h
+index c26f5a9e0..724b15095 100644
+--- a/drivers/pinctrl/sunxi/pinctrl-sunxi.h
++++ b/drivers/pinctrl/sunxi/pinctrl-sunxi.h
+@@ -48,8 +48,11 @@
+ #define GPIO_POW_MODE_MASK  0xFFF
+ #endif
+ 
++/* The A133 (sun50iw10p1) has the register too: without it port F, the SD
++ * card's bank, can change its pads' mode but never its supply */
+ #if defined(CONFIG_ARCH_SUN8IW16P1) \
+ 	|| defined(CONFIG_ARCH_SUN8IW19P1) \
++	|| defined(CONFIG_ARCH_SUN50IW10P1) \
+ 	|| defined(CONFIG_ARCH_SUN50IW11P1)
+ #define CONFIG_SUNXI_PIO_POWER_SEL
+ #define GPIO_POW_VOL_SEL   0x0350

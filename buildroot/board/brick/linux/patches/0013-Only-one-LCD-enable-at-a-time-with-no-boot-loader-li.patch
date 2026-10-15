@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Mon, 12 Oct 2026 03:05:41 -0400
+Subject: [PATCH] Only one LCD enable at a time: with no boot loader lighting
+ the panel, the resume work's fake enable and start_work's enable both run at
+ boot, and the second began while the first was still in the panel's open
+ flow, powering it twice without the reset pin or the interrupt. One mutex
+ held for each whole enable; whichever comes second finds the panel enabled
+
+---
+ .../fbdev/sunxi/disp2/disp/de/disp_lcd.c      | 32 +++++++++++++++++--
+ 1 file changed, 30 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/video/fbdev/sunxi/disp2/disp/de/disp_lcd.c b/drivers/video/fbdev/sunxi/disp2/disp/de/disp_lcd.c
+index 257e60ff3..93efebc19 100644
+--- a/drivers/video/fbdev/sunxi/disp2/disp/de/disp_lcd.c
++++ b/drivers/video/fbdev/sunxi/disp2/disp/de/disp_lcd.c
+@@ -58,6 +58,14 @@ struct disp_lcd_private_data {
+ 	struct disp_device_config config;
+ };
+ static spinlock_t lcd_data_lock;
++/*
++ * Held for the whole of an enable. With no boot loader to light the panel,
++ * the resume work's fake enable and start_work's enable both run at boot,
++ * and the second began while the first was still in the open flow, so the
++ * panel was powered twice and the second could get neither the reset pin nor
++ * the interrupt. Whichever comes second now waits, then finds it enabled.
++ */
++static DEFINE_MUTEX(lcd_enable_lock);
+ 
+ static struct disp_device *lcds;
+ static struct disp_lcd_private_data *lcd_private;
+@@ -1688,7 +1696,7 @@ OUT:
+ }
+ 
+ /* lcd enable except for backlight */
+-static s32 disp_lcd_fake_enable(struct disp_device *lcd)
++static s32 __disp_lcd_fake_enable(struct disp_device *lcd)
+ {
+ 	unsigned long flags;
+ 	struct disp_lcd_private_data *lcdp = disp_lcd_get_priv(lcd);
+@@ -1782,6 +1790,16 @@ static s32 disp_lcd_fake_enable(struct disp_device *lcd)
+ 	return 0;
+ }
+ 
++static s32 disp_lcd_fake_enable(struct disp_device *lcd)
++{
++	s32 ret;
++
++	mutex_lock(&lcd_enable_lock);
++	ret = __disp_lcd_fake_enable(lcd);
++	mutex_unlock(&lcd_enable_lock);
++	return ret;
++}
++
+ static int skip_open_backlight;
+ #ifndef MODULE
+ static int __init early_bootreason(char *str)
+@@ -1926,7 +1944,7 @@ static s32 disp_lcd_disable(struct disp_device *lcd)
+ }
+ 
+ #else
+-static s32 disp_lcd_enable(struct disp_device *lcd)
++static s32 __disp_lcd_enable(struct disp_device *lcd)
+ {
+ 	unsigned long flags;
+ 	struct disp_lcd_private_data *lcdp = disp_lcd_get_priv(lcd);
+@@ -2045,6 +2063,16 @@ static s32 disp_lcd_enable(struct disp_device *lcd)
+ 	return 0;
+ }
+ 
++static s32 disp_lcd_enable(struct disp_device *lcd)
++{
++	s32 ret;
++
++	mutex_lock(&lcd_enable_lock);
++	ret = __disp_lcd_enable(lcd);
++	mutex_unlock(&lcd_enable_lock);
++	return ret;
++}
++
+ static s32 disp_lcd_disable(struct disp_device *lcd)
+ {
+ 	unsigned long flags;

@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Sat, 10 Oct 2026 22:50:43 -0400
+Subject: [PATCH] Pin banks can go back to 3.3 V: sunxi_sel_pio_mode only ever
+ set a bank's 1.8 V mode bit and never cleared it, so a bank once in 1.8 V
+ mode stayed there with its supply switched to 3.3 V under it
+
+---
+ drivers/pinctrl/sunxi/pinctrl-sunxi.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/pinctrl/sunxi/pinctrl-sunxi.c b/drivers/pinctrl/sunxi/pinctrl-sunxi.c
+index 75c58f312..511155a95 100644
+--- a/drivers/pinctrl/sunxi/pinctrl-sunxi.c
++++ b/drivers/pinctrl/sunxi/pinctrl-sunxi.c
+@@ -1771,6 +1771,9 @@ int sunxi_sel_pio_mode(struct pinctrl *pinctrl, u32 pm_sel)
+ 			bank = pins[i] / PINS_PER_BANK;
+ 			raw_spin_lock_irqsave(&pctl->lock, flags);
+ 			tmp = readl(pctl->membase + GPIO_POW_MODE_SEL);
++			/* Cleared as well as set: OR alone left a bank in 1.8 V
++			 * mode for good, its supply switched to 3.3 V under it */
++			tmp &= ~(1 << bank);
+ 			tmp |= (pm_sel << bank);
+ 			writel(tmp, pctl->membase + GPIO_POW_MODE_SEL);
+ #ifdef CONFIG_SUNXI_PIO_POWER_SEL

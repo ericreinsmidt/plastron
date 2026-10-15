@@ -23,7 +23,7 @@ SOURCES := -v $(TORTOS_SRC):/tortos:ro -v $(DIATOM_SRC):/diatom:ro -v $(TORTOS_V
 	$(if $(wildcard $(TORTOS_SS_ENV)),-v $(TORTOS_SS_ENV):/tortos-ss.env:ro)
 DOCKER_RUN := docker run --rm -t -v $(CURDIR):/src:ro $(SOURCES) -v $(VOLUME):/work $(IMAGE)
 
-.PHONY: all builder volume image base brick brick-bootloader bootloader shell linux-rebuild copy-out clean-output release
+.PHONY: all builder volume image base brick brick-kernel brick-bootloader bootloader shell linux-rebuild copy-out clean-output release
 
 all: image
 
@@ -48,18 +48,27 @@ base: builder volume
 # come from BRICK_GPU, the userspace half of DDK 1.11@5516664 from the Sonic
 # Pad SDK (lib64/ and include/), mounted at /brick-gpu.
 BRICK_GPU ?= $(HOME)/brick-runtime/gpu-ddk-1.11
-# Its kernel modules too, built with its kernel in carapace (GCC 10, which
-# that kernel needs) and exported there by brick-spike/runtime/export-modules.sh
-BRICK_MODULES ?= $(HOME)/brick-runtime/modules
+# Its kernel and modules come from make brick-kernel, in this volume.
 brick: builder volume
 	@[ -d "$(BRICK_GPU)/lib64" ] || { echo "no GPU libraries in $(BRICK_GPU): the Brick needs" \
 		"Imagination's PowerVR DDK 1.11@5516664 userspace libraries for the GE8300," \
 		"which plastron doesn't include (buildroot/package/pvr-ge8300/Config.in" \
 		"says which files and where they go)" >&2; exit 1; }
-	@[ -f "$(BRICK_MODULES)/pvrsrvkm.ko" ] || { echo "no kernel modules in $(BRICK_MODULES)" >&2; exit 1; }
+	@docker run --rm -v $(VOLUME):/work $(IMAGE) test -f /work/brick-kernel/images/pvrsrvkm.ko || \
+		{ echo "no Brick kernel modules yet: make brick-kernel first" >&2; exit 1; }
 	docker run --rm -t -e FLAVOR=brick -v $(CURDIR):/src:ro $(SOURCES) \
-		-v $(BRICK_GPU):/brick-gpu:ro -v $(BRICK_MODULES):/brick-modules:ro \
+		-v $(BRICK_GPU):/brick-gpu:ro \
 		-v $(VOLUME):/work $(IMAGE) sh /src/scripts/build.sh $(BRICK_TARGET)
+
+# The TrimUI Brick's kernel and the modules it loads: Allwinner's Linux 4.9
+# with board/brick/linux/patches, built by scripts/build-brick-kernel.sh in
+# docker/brick-kernel (the GCC 10 that kernel needs) into the volume's
+# brick-kernel/images, where make brick takes the modules from
+BRICK_KERNEL_IMAGE := plastron-brick-kernel
+brick-kernel: volume
+	docker build -q -t $(BRICK_KERNEL_IMAGE) docker/brick-kernel
+	docker run --rm -v $(CURDIR):/src:ro -v $(VOLUME):/work $(BRICK_KERNEL_IMAGE) \
+		sh /src/scripts/build-brick-kernel.sh
 
 # The TrimUI Brick's boot loader: TF-A's BL31 and U-Boot, built by
 # scripts/build-brick-bootloader.sh in docker/brick-boot (the GCC 14 it was

@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Sat, 10 Oct 2026 22:50:43 -0400
+Subject: [PATCH] AXP2202: BLDO4 and CLDO1 to CLDO4 run 0.5 to 3.5 V in 100 mV
+ steps, like the other LDOs, where the table had CPUSLDO's 0.5 to 1.4 V in 50
+ mV steps, so any voltage asked of them was either refused or set wrong
+
+---
+ drivers/regulator/axp2101-regulator.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/regulator/axp2101-regulator.c b/drivers/regulator/axp2101-regulator.c
+index 462e9aae7..3afd8795d 100644
+--- a/drivers/regulator/axp2101-regulator.c
++++ b/drivers/regulator/axp2101-regulator.c
+@@ -809,19 +809,19 @@ static const struct regulator_desc axp2202_regulators[] = {
+ 	AXP_DESC(AXP2202, BLDO3, "bldo3", "bldo", 500, 3500, 100,
+ 		 AXP2202_BLDO3_CFG, GENMASK(4, 0), AXP2202_LDO_EN_CFG0,
+ 		 BIT(6)),
+-	AXP_DESC(AXP2202, BLDO4, "bldo4", "bldo", 500, 1400, 50,
++	AXP_DESC(AXP2202, BLDO4, "bldo4", "bldo", 500, 3500, 100,
+ 		 AXP2202_BLDO4_CFG, GENMASK(4, 0), AXP2202_LDO_EN_CFG0,
+ 		 BIT(7)),
+-	AXP_DESC(AXP2202, CLDO1, "cldo1", "cldo", 500, 1400, 50,
++	AXP_DESC(AXP2202, CLDO1, "cldo1", "cldo", 500, 3500, 100,
+ 		 AXP2202_CLDO1_CFG, GENMASK(4, 0), AXP2202_LDO_EN_CFG1,
+ 		 BIT(0)),
+-	AXP_DESC(AXP2202, CLDO2, "cldo2", "cldo", 500, 1400, 50,
++	AXP_DESC(AXP2202, CLDO2, "cldo2", "cldo", 500, 3500, 100,
+ 		 AXP2202_CLDO2_CFG, GENMASK(4, 0), AXP2202_LDO_EN_CFG1,
+ 		 BIT(1)),
+-	AXP_DESC(AXP2202, CLDO3, "cldo3", "cldo", 500, 1400, 50,
++	AXP_DESC(AXP2202, CLDO3, "cldo3", "cldo", 500, 3500, 100,
+ 		 AXP2202_CLDO3_CFG, GENMASK(4, 0), AXP2202_LDO_EN_CFG1,
+ 		 BIT(2)),
+-	AXP_DESC(AXP2202, CLDO4, "cldo4", "cldo", 500, 1400, 50,
++	AXP_DESC(AXP2202, CLDO4, "cldo4", "cldo", 500, 3500, 100,
+ 		 AXP2202_CLDO4_CFG, GENMASK(4, 0), AXP2202_LDO_EN_CFG1,
+ 		 BIT(3)),
+ };
