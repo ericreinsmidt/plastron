@@ -1,8 +1,8 @@
 #!/bin/sh
 # The Brick's start, from inittab's sysinit, after the mounts: the card, the
 # GPU, the pad, Diatom and TortOS, and the USB cable's network for bring-up.
-# The spike's rdinit as it was (carapace brick-spike/startup), less what an
-# initramfs needed: the libraries are in /usr/lib with real links, the GPU's
+# What the bring-up's rdinit did, less what an initramfs needed: the
+# libraries are in /usr/lib with real links, the GPU's
 # firmware and powervr.ini come with pvr-ge8300, the ALSA configuration with
 # the root. Each step's time since the kernel started goes to /tmp/boot-times.
 #

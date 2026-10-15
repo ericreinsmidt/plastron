@@ -1,0 +1,8 @@
+config BR2_PACKAGE_BRICK_ROOTSWITCH
+	bool "brick-rootswitch"
+	depends on BR2_aarch64
+	help
+	  The TrimUI Brick's initramfs program, /rdinit: it finds the
+	  card's partition named plastron-root, mounts it and hands over
+	  to its init. Built static; board/brick/post-image.sh packs it
+	  into initramfs.cpio.gz.

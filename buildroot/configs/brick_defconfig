@@ -76,11 +76,18 @@ BR2_PACKAGE_DOSFSTOOLS_FSCK_FAT=y
 BR2_PACKAGE_EXFATPROGS=y
 
 # The root: ext4, in the card's partition named plastron-root, which the
-# spike's initramfs (carapace brick-spike/startup/rootswitch.c) mounts. Not
+# initramfs (package/brick-rootswitch) mounts. Not
 # orphan_file, which mke2fs turns on and the 4.9 kernel can only mount
 # read-only.
 BR2_TARGET_ROOTFS_EXT2=y
 BR2_TARGET_ROOTFS_EXT2_4=y
 BR2_TARGET_ROOTFS_EXT2_SIZE="256M"
 BR2_TARGET_ROOTFS_EXT2_MKFS_OPTIONS="-O ^64bit,^orphan_file"
+
+# The boot files beside it (board/brick/post-image.sh): the initramfs, whose
+# one program is rootswitch, boot.scr made with mkimage, and the kernel,
+# device tree and boot loader from make brick-kernel and make brick-bootloader
+BR2_PACKAGE_BRICK_ROOTSWITCH=y
+BR2_PACKAGE_HOST_UBOOT_TOOLS=y
+BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_PX2_PATH)/board/brick/post-image.sh"
 # BR2_TARGET_ROOTFS_TAR is not set
