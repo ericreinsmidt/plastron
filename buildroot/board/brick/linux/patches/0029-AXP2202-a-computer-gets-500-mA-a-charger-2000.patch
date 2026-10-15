@@ -1,0 +1,135 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] AXP2202: a computer on the USB port gets 500 mA and a charger
+ 2000 mA: the USB supply takes the 500 mA the USB device driver asks for when a
+ computer resets the bus, unless the Type-C source offers 1.5 or 3 A on CC, and
+ that driver finds the supply by name, as its det_vbus_supply phandle finds
+ nothing on this kernel
+
+---
+--- a/drivers/power/supply/axp2202_charger.c
++++ b/drivers/power/supply/axp2202_charger.c
+@@ -125,6 +125,12 @@
+ 	POWER_SUPPLY_PROP_ONLINE,
+ };
+ 
++static enum power_supply_property axp2202_usb_props[] = {
++	POWER_SUPPLY_PROP_PRESENT,
++	POWER_SUPPLY_PROP_ONLINE,
++	POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT,
++};
++
+ static int axp2202_read_vbat(struct power_supply *ps,
+ 			     union power_supply_propval *val)
+ {
+@@ -568,6 +574,62 @@
+ 	return ret;
+ }
+ 
++/*
++ * The USB input current limit (REG 17: 100 mA plus 50 mA a step). On a plug-in
++ * the PMIC sets it itself: what a Type-C source offers on CC when that is
++ * 1.5 or 3 A, and otherwise 2000 mA, its default, which suits a charger. A
++ * computer resets the USB bus as it finds the Brick, and the USB device driver
++ * then asks for 500 mA here (sunxi_set_cur_vol_work, in mA, as Allwinner's
++ * drivers pass it; a value of 10000 or more is taken as the class's uA).
++ * A source offering 1.5 or 3 A on CC keeps what it offers: a computer's
++ * Type-C port that says so means it. Measured on the Brick 2026-10-14: a
++ * USB-A charger and a Mac's USB-A port both get 2000 mA without this, and
++ * BC1.2 reads "dedicated charger" on both, so the bus reset is what tells
++ * them apart.
++ */
++static int axp2202_usb_get_property(struct power_supply *psy,
++				    enum power_supply_property psp,
++				    union power_supply_propval *val)
++{
++	struct axp2202_device_info *di = power_supply_get_drvdata(psy);
++	unsigned int data;
++	int ret;
++
++	if (psp != POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT)
++		return axp2202_usb_ac_get_property(psy, psp, val);
++	ret = regmap_read(di->regmap, AXP2202_IIN_LIM, &data);
++	if (ret)
++		return ret;
++	val->intval = (100 + (data & GENMASK(5, 0)) * 50) * 1000;
++	return 0;
++}
++
++static int axp2202_usb_set_property(struct power_supply *psy,
++				    enum power_supply_property psp,
++				    const union power_supply_propval *val)
++{
++	struct axp2202_device_info *di = power_supply_get_drvdata(psy);
++	unsigned int cc;
++	int ma;
++
++	if (psp != POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT)
++		return -EINVAL;
++	/* Bits 5:4 of the CC status: 2 is 1.5 A offered, 3 is 3 A */
++	if (!regmap_read(di->regmap, AXP2202_CC_STAT0, &cc) &&
++	    ((cc >> 4) & 3) >= 2)
++		return 0;
++	ma = val->intval >= 10000 ? val->intval / 1000 : val->intval;
++	ma = clamp_val(ma, 100, 3250);
++	return regmap_update_bits(di->regmap, AXP2202_IIN_LIM, GENMASK(5, 0),
++				  (ma - 100) / 50);
++}
++
++static int axp2202_usb_writeable(struct power_supply *psy,
++				 enum power_supply_property psp)
++{
++	return psp == POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT;
++}
++
+ static int axp2202_get_bat_status(struct power_supply *psy,
+ 				  union power_supply_propval *val)
+ {
+@@ -769,13 +831,13 @@
+ 
+ 	usb_desc->name = "axp2202-usb";
+ 	usb_desc->type = POWER_SUPPLY_TYPE_USB;
+-	usb_desc->properties = axp2202_usb_ac_props;
+-	usb_desc->num_properties = ARRAY_SIZE(axp2202_usb_ac_props);
+-	usb_desc->get_property = axp2202_usb_ac_get_property;
+-	usb_desc->set_property = NULL;
+-	usb_desc->property_is_writeable = NULL;
++	usb_desc->properties = axp2202_usb_props;
++	usb_desc->num_properties = ARRAY_SIZE(axp2202_usb_props);
++	usb_desc->get_property = axp2202_usb_get_property;
++	usb_desc->set_property = axp2202_usb_set_property;
++	usb_desc->property_is_writeable = axp2202_usb_writeable;
+ 
+ 	di->usb = power_supply_register(di->dev, usb_desc, &psy_cfg);
+ 	if (IS_ERR(di->usb)) {
+ 		dev_err(di->dev, "failed to register usb\n");
+ 		ret = PTR_ERR(di->bat);
+--- a/drivers/usb/sunxi_usb/udc/sunxi_udc.c
++++ b/drivers/usb/sunxi_usb/udc/sunxi_udc.c
+@@ -400,11 +400,14 @@ void sunxi_set_cur_vol_work(struct work_struct *work)
+ 		axp_usbvol(CHARGE_USB_20);
+ 		axp_usbcur(CHARGE_USB_20);
+ #elif defined CONFIG_POWER_SUPPLY && !defined SUNXI_USB_FPGA
+-	if (of_find_property(g_udc_pdev->dev.of_node, "det_vbus_supply", NULL))
+-		psy = devm_power_supply_get_by_phandle(&g_udc_pdev->dev,
+-						     "det_vbus_supply");
++	/*
++	 * By name, not det_vbus_supply: this kernel matches a phandle against
++	 * a supply's parent node, and the AXP2202's supplies all hang off its
++	 * battery node, so the phandle finds nothing
++	 */
++	psy = power_supply_get_by_name("axp2202-usb");
+ 
+-	if (!psy || IS_ERR(psy)) {
++	if (!psy) {
+ 		DMSG_PANIC("%s()%d WARN: get power supply failed\n",
+ 			   __func__, __LINE__);
+ 	} else {
+@@ -412,6 +415,7 @@ void sunxi_set_cur_vol_work(struct work_struct *work)
+ 
+ 		power_supply_set_property(psy,
+ 					POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT, &temp);
++		power_supply_put(psy);
+ 	}
+ #endif
+ }
