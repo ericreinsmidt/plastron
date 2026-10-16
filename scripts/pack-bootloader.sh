@@ -2,9 +2,8 @@
 # Runs in an x86 container: Rockchip's loaderimage and trust_merger only exist
 # as x86 binaries. Puts the card's bootloader together from what
 # build-bootloader.sh left in /work/bootloader: the first stage (Rockchip's DDR
-# init and miniloader), then U-Boot as uboot.img and Rockchip's BL31 as
-# trust.img, where the miniloader reads them, the same layout ROCKNIX's
-# bootloader has.
+# init and miniloader), then U-Boot as uboot.img and TF-A's BL31 as trust.img,
+# where the miniloader reads them, the same layout ROCKNIX's bootloader has.
 set -eu
 
 WORK=/work/bootloader
@@ -18,7 +17,7 @@ cat > trust.ini <<EOF
 SEC=0
 [BL31_OPTION]
 SEC=1
-PATH=$R/rk3326_bl31_v1.34.elf
+PATH=$WORK/bl31.elf
 ADDR=0x00010000
 [BL32_OPTION]
 SEC=0

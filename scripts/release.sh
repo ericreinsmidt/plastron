@@ -40,6 +40,10 @@ cp "/work/dl/u-boot-$UBOOT_VERSION.tar.gz" "$UBOOT/"
 cp -R /src/buildroot/board/px2/u-boot/. "$UBOOT/plastron/"
 # Copied from a working tree on a Mac, so Finder's files come too
 find "$UBOOT/plastron" -name .DS_Store -delete
+# TF-A's BL31 is built alongside it, unpatched, from this tarball
+TFA_COMMIT=$(sed -n 's/^TFA_COMMIT=//p' /src/scripts/build-bootloader.sh)
+mkdir -p "$OUTPUT/legal-info/sources/tf-a-$TFA_COMMIT"
+cp "/work/dl/tf-a-$TFA_COMMIT.tar.gz" "$OUTPUT/legal-info/sources/tf-a-$TFA_COMMIT/"
 
 # Buildroot itself is GPL-2.0+, and its makefiles and patches built every
 # package in the image, but legal-info never saves it (it says so on every

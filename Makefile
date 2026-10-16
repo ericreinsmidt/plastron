@@ -86,10 +86,10 @@ brick-bootloader: volume
 		chown $(shell id -u):$(shell id -g) /out/u-boot-sunxi-with-spl.bin'
 	@ls -l buildroot/board/brick/bootloader/u-boot-sunxi-with-spl.bin
 
-# The Pixel 2's bootloader: U-Boot built from source, with Rockchip's DDR init,
-# miniloader and BL31 from rkbin (pinned, checked by sha256), put together into
-# buildroot/board/px2/bootloader/u-boot-px2.bin. Rarely needed: the result is
-# committed, and `make` only uses it.
+# The Pixel 2's bootloader: U-Boot and TF-A's BL31 built from source, with
+# Rockchip's DDR init and miniloader from rkbin (pinned, checked by sha256), put
+# together into buildroot/board/px2/bootloader/u-boot-px2.bin. Rarely needed:
+# the result is committed, and `make` only uses it.
 bootloader: builder volume
 	$(DOCKER_RUN) sh /src/scripts/build-bootloader.sh
 	docker run --rm --platform linux/amd64 -v $(CURDIR):/src -v $(VOLUME):/work \

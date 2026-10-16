@@ -45,9 +45,10 @@ licenses:
 
   buildroot/board/px2/bootloader/
                    The Pixel 2's bootloader, made by make bootloader: our
-                   U-Boot with Rockchip's prebuilt DDR init, miniloader and
-                   BL31, redistributed unmodified under Rockchip's terms
-                   (github.com/rockchip-linux/rkbin, the commit
+                   U-Boot (GPL-2.0+) and TF-A's BL31 (BSD-3-Clause), both
+                   built from source, with Rockchip's prebuilt DDR init and
+                   miniloader, redistributed unmodified under Rockchip's
+                   terms (github.com/rockchip-linux/rkbin, the commit
                    scripts/build-bootloader.sh pins).
 
   buildroot/package/splash/frames.bin
