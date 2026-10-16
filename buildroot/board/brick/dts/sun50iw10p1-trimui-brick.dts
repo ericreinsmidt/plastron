@@ -3165,7 +3165,11 @@
 			interrupts = <0x00 0x19 0x04>;
 			sunxi,cpudai-controller = <0x7e>;
 			sunxi,audio-codec = <0x7f>;
-			hp_detect_case = <0x00>;
+			/* 1, the codec's high detect mode, where TrimUI's tree says 0: at 0
+			 * every plug reads backwards (headphones in at boot with the jack
+			 * empty, out when plugged in); at 1 each one reads right, measured
+			 * 2026-10-16 by setting the mode by hand and plugging in twice */
+			hp_detect_case = <0x01>;
 			device_type = "sndcodec";
 			status = "okay";
 			noheadphonemic = <0x01>;
