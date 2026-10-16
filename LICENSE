@@ -44,10 +44,11 @@ licenses:
                    Hardkernel, and our own. GPL-2.0+, as U-Boot is.
 
   buildroot/board/px2/bootloader/
-                   ROCKNIX's bootloader, and ours with U-Boot rebuilt.
-                   Both carry Rockchip's prebuilt DDR init, miniloader and
-                   BL31, redistributed as ROCKNIX does, under Rockchip's
-                   terms (github.com/rockchip-linux/rkbin).
+                   The Pixel 2's bootloader, made by make bootloader: our
+                   U-Boot with Rockchip's prebuilt DDR init, miniloader and
+                   BL31, redistributed unmodified under Rockchip's terms
+                   (github.com/rockchip-linux/rkbin, the commit
+                   scripts/build-bootloader.sh pins).
 
   buildroot/package/splash/frames.bin
                    TortOS's boot animation, from TortOS. MIT.

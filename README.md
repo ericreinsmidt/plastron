@@ -27,12 +27,12 @@ from their 20260901 release, and the config cut down to what the Pixel 2
 uses. The plan is to carve the patches down too, one at a time, to kernel.org
 plus the few this chip actually needs.
 
-The bootloader is ROCKNIX's, with U-Boot rebuilt from source by
-`make bootloader` (`buildroot/board/px2/u-boot/`). Rockchip's DDR init,
-miniloader and BL31 are still their prebuilt blobs. U-Boot records its own
-timings in the device tree it hands Linux (bootstage), so where the
-bootloader spends its time can be read on the running device under
-`/proc/device-tree/bootstage`, with no serial console.
+The bootloader is put together by `make bootloader`: U-Boot built from source
+(`buildroot/board/px2/u-boot/`), with Rockchip's DDR init, miniloader and BL31,
+which are prebuilt blobs, fetched from Rockchip's rkbin at a pinned commit and
+checked by sha256. U-Boot records its own timings in the device tree it hands
+Linux (bootstage), so where the bootloader spends its time can be read on the
+running device under `/proc/device-tree/bootstage`, with no serial console.
 
 ## Installing
 
