@@ -23,9 +23,9 @@ headphone switching, every button, power, brightness and battery. It has no
 Wi-Fi, Bluetooth or rumble, and neither does plastron.
 
 The kernel is kernel.org 7.1.2 with ROCKNIX's patches, config and device tree
-from their 20260901 release, and the config cut down to what the Pixel 2
-uses. The plan is to carve the patches down too, one at a time, to kernel.org
-plus the few this chip actually needs.
+from their 20260901 release, the config cut down to what the Pixel 2 uses, and
+the patches cut down to the ones it needs: PX30S support, the panel and joypad
+drivers, and a few fixes, 19 in all.
 
 The bootloader is put together by `make bootloader`: U-Boot
 (`buildroot/board/px2/u-boot/`) and TF-A's BL31, both built from source, with

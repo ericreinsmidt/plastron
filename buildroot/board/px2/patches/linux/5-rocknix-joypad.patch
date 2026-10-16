@@ -18,7 +18,7 @@ diff --git a/drivers/input/joystick/Kconfig b/drivers/input/joystick/Kconfig
 index 38355e3..870179e 100644
 --- a/drivers/input/joystick/Kconfig
 +++ b/drivers/input/joystick/Kconfig
-@@ -452,4 +452,12 @@ config JOYSTICK_SEESAW
+@@ -422,4 +422,12 @@ config JOYSTICK_SEESAW
  	  To compile this driver as a module, choose M here: the module will be
  	  called adafruit-seesaw.
  
@@ -35,9 +35,9 @@ diff --git a/drivers/input/joystick/Makefile b/drivers/input/joystick/Makefile
 index 2a0524b..5ebca98 100644
 --- a/drivers/input/joystick/Makefile
 +++ b/drivers/input/joystick/Makefile
-@@ -47,3 +47,4 @@ obj-$(CONFIG_JOYSTICK_WALKERA0701)	+= walkera0701.o
+@@ -41,3 +41,4 @@
+ obj-$(CONFIG_JOYSTICK_WALKERA0701)	+= walkera0701.o
  obj-$(CONFIG_JOYSTICK_XPAD)		+= xpad.o
- obj-$(CONFIG_JOYSTICK_XU10)		+= xu10-joypad.o
  obj-$(CONFIG_JOYSTICK_ZHENHUA)		+= zhenhua.o
 +obj-$(CONFIG_JOYSTICK_ROCKNIX_SINGLEADC)	+= rocknix-singleadc-joypad.o
 diff --git a/drivers/input/joystick/rocknix-joypad.h b/drivers/input/joystick/rocknix-joypad.h

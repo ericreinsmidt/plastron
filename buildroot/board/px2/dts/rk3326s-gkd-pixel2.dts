@@ -312,16 +312,11 @@
 	};
 
 	/*
-	 * Forwards these values to BL31 firmware via SIP calls, arming wake
-	 * sources for PX30S's firmware-controlled deep suspend (see
-	 * 031-px30s-suspend-wakeup-config.patch). Values match vendor
-	 * exactly.
-	 *
-	 * DO NOT REMOVE, even though no other RK3326/Rockchip board has this
-	 * node: confirmed by testing with it fully disabled that mem-sleep
-	 * stops resuming entirely without it. Suspend/resume is fully
-	 * reliable end to end: the separate post-resume cpufreq-transition
-	 * crash is fixed - see 034-px30s-cru-suspend-resume-restore.patch.
+	 * From ROCKNIX: their driver forwards these values to BL31 to arm wake
+	 * sources for the PX30S's suspend, and they found suspend stops
+	 * resuming without it. plastron doesn't suspend (Auto Off powers off)
+	 * and doesn't carry that driver, so nothing reads this node; it stays
+	 * for whoever brings suspend back.
 	 */
 	rockchip_suspend: rockchip-suspend {
 		compatible = "rockchip,pm-px30";

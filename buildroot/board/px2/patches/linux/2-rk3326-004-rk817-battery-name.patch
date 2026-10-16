@@ -1,0 +1,16 @@
+From ROCKNIX's 004-input-drivers, the one part the Pixel 2 uses: the RK817
+battery is named "battery", the name TortOS reads it by.
+
+diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_charger.c
+index 9436c6b..9c26d96 100644
+--- a/drivers/power/supply/rk817_charger.c
++++ b/drivers/power/supply/rk817_charger.c
+@@ -681,7 +681,7 @@ static int rk817_bat_prop_writeable(struct power_supply *psy,
+ }
+ 
+ static const struct power_supply_desc rk817_bat_desc = {
+-	.name = "rk817-battery",
++	.name = "battery",
+ 	.type = POWER_SUPPLY_TYPE_BATTERY,
+ 	.properties = rk817_bat_props,
+ 	.property_is_writeable	= rk817_bat_prop_writeable,
