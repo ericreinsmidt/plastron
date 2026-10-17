@@ -1,0 +1,105 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] Headphone jack: no headset microphone check where the device
+ tree says noheadphonemic, as the Brick's does: the check fired on its own with
+ the jack empty, and each time cut the speaker and the headphone amp for 700
+ ms, so the speaker stayed off for minutes at a time. Every plug is headphones
+
+---
+--- a/sound/soc/sunxi/sun50iw10-sndcodec.c
++++ b/sound/soc/sunxi/sun50iw10-sndcodec.c
+@@ -80,6 +80,12 @@
+ 	u32 key_hook;
+ 	u32 key_voiceassist;
+ 	u32 hp_detect_case;
++	/*
++	 * The jack takes headphones only, no headset microphone: the device
++	 * tree's noheadphonemic. The microphone check is then never armed, and
++	 * every plug is headphones
++	 */
++	bool no_hs_mic;
+ #endif
+ };
+ 
+@@ -171,7 +177,14 @@
+ 	int jack_type = 0, reg_val = 0;
+ 
+ 	mutex_lock(&priv->jack_mlock);
+-	if (priv->detect_state == PLUG_IN) {
++	if (priv->detect_state == PLUG_IN && priv->no_hs_mic) {
++		if (priv->switch_status != SND_JACK_HEADPHONE) {
++			priv->switch_status = SND_JACK_HEADPHONE;
++			snd_jack_report(priv->jack.jack, priv->switch_status);
++			pr_err("plugin --> switch:%d\n", priv->switch_status);
++			switch_state = priv->switch_status;
++		}
++	} else if (priv->detect_state == PLUG_IN) {
+ 		/* Enable hbias and adc*/
+ 		snd_soc_update_bits(priv->codec, SUNXI_MICBIAS_REG,
+ 				(0x1 << MICADCEN), (0x1 << MICADCEN));
+@@ -220,6 +233,8 @@
+ 		switch_state = priv->switch_status;
+ 		pr_err("plugout --> switch:%d\n", priv->switch_status);
+ 		priv->tv_headset_plugin.tv_sec = 0;
++		if (priv->no_hs_mic)
++			goto out;
+ 		/*enable hbias and adc*/
+ 		snd_soc_update_bits(priv->codec, SUNXI_MICBIAS_REG,
+ 				    (0x1 << HMICBIASEN), (0x1 << HMICBIASEN));
+@@ -232,6 +247,7 @@
+ 				    (0x1 << MIC_DET_IRQ_EN),
+ 				    (0x1 << MIC_DET_IRQ_EN));
+ 	}
++out:
+ 	mutex_unlock(&priv->jack_mlock);
+ }
+ 
+@@ -303,6 +319,23 @@
+ 				snd_soc_read(priv->codec, SUNXI_HMIC_STS));
+ 
+ 	jack_state = snd_soc_read(priv->codec, SUNXI_HMIC_STS);
++
++	/*
++	 * Without a headset microphone the check is never armed, but a pending
++	 * one is cleared all the same: the interrupt is level triggered. Left
++	 * to the code below, each one cut the speaker and the headphone amp for
++	 * 700 ms, and on the Brick the check fires on its own for minutes at a
++	 * time with the jack empty, about one every 0.7 s, so the speaker was off
++	 * through all of it
++	 */
++	if (priv->no_hs_mic && (jack_state & (1 << MIC_DET_ST))) {
++		regval = snd_soc_read(priv->codec, SUNXI_HMIC_STS);
++		regval &= ~(0x1 << JACK_DET_IIN_ST);
++		regval &= ~(0x1 << JACK_DET_OUT_ST);
++		regval |= 0x1 << MIC_DET_ST;
++		snd_soc_write(priv->codec, SUNXI_HMIC_STS, regval);
++		jack_state &= ~(1 << MIC_DET_ST);
++	}
+ 
+ 	if (priv->detect_state != PLUG_IN) {
+ 		if (jack_state & (1 << MIC_DET_ST)) {
+@@ -647,6 +680,15 @@
+ 	snd_soc_update_bits(priv->codec, SUNXI_HMIC_CTRL,
+ 			(0xf << HMIC_N), (HP_DEBOUCE_TIME << HMIC_N));
+ 
++	if (priv->no_hs_mic) {
++		snd_soc_update_bits(priv->codec, SUNXI_MICBIAS_REG,
++				    (0x1 << HMICBIASEN) | (0x1 << MICADCEN), 0);
++		snd_soc_update_bits(priv->codec, SUNXI_HMIC_CTRL,
++				    (0x1 << MIC_DET_IRQ_EN), 0);
++		schedule_delayed_work(&priv->hs_init_work, msecs_to_jiffies(10));
++		return;
++	}
++
+ 	snd_soc_update_bits(priv->codec, SUNXI_MICBIAS_REG,
+ 			    (0x1 << HMICBIASEN), (0x1 << HMICBIASEN));
+ 	snd_soc_update_bits(priv->codec, SUNXI_MICBIAS_REG,
+@@ -796,6 +838,8 @@
+ 		priv->hp_detect_case = temp_val;
+ 		pr_err("[audio] hp_detect_case: %d\n", priv->hp_detect_case);
+ 	}
++	if (of_property_read_u32(np, "noheadphonemic", &temp_val) == 0 && temp_val)
++		priv->no_hs_mic = true;
+ 
+ 	priv->jackirq = platform_get_irq(pdev, 0);
+ 	if (priv->jackirq < 0) {
