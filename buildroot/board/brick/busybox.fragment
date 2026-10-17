@@ -19,3 +19,9 @@ CONFIG_NC_EXTRA=y
 
 # tar's -z, as on the Pixel
 CONFIG_FEATURE_SEAMLESS_GZ=y
+
+# The clock from the network when Wi-Fi has an address (the udhcpc hook
+# /usr/share/udhcpc/default.script.d/ntp): ntpd as a client only, and timeout,
+# so a sync on a network that doesn't answer gives up
+CONFIG_NTPD=y
+CONFIG_TIMEOUT=y
