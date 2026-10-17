@@ -58,6 +58,11 @@ BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
 BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
 # The XR829's firmware, closed, from outside the repository (see its package)
 BR2_PACKAGE_XR829_FIRMWARE=y
+# curl, which TortOS's online features run (src/net.c: scraping,
+# RetroAchievements), over OpenSSL; TortOS brings its own CA bundle
+BR2_PACKAGE_LIBCURL=y
+BR2_PACKAGE_LIBCURL_CURL=y
+BR2_PACKAGE_LIBCURL_OPENSSL=y
 
 # Libraries TortOS and Diatom load, as on the Pixel: SDL2_image with PNG and
 # JPEG, SDL2_ttf, sqlite, zlib, FFmpeg for Muse
