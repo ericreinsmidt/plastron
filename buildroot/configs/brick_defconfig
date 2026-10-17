@@ -53,6 +53,8 @@ BR2_PACKAGE_WPA_SUPPLICANT=y
 BR2_PACKAGE_WPA_SUPPLICANT_NL80211=y
 BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
 BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
+# The XR829's firmware, closed, from outside the repository (see its package)
+BR2_PACKAGE_XR829_FIRMWARE=y
 
 # Libraries TortOS and Diatom load, as on the Pixel: SDL2_image with PNG and
 # JPEG, SDL2_ttf, sqlite, zlib, FFmpeg for Muse

@@ -5,7 +5,10 @@ config BR2_PACKAGE_BRICK_KMODS
 	  The TrimUI Brick's kernel modules, into /usr/lib/brick, where
 	  /etc/init.d/brick loads them: the gamepad (brick-pad.ko) and
 	  the GPU's kernel driver (pvrsrvkm.ko, dc_sunxi.ko,
-	  Imagination's DDK 1.11 kernel half, dual MIT/GPL).
+	  Imagination's DDK 1.11 kernel half, dual MIT/GPL), and the
+	  XR829's Wi-Fi driver with cfg80211 (cfg80211.ko, xr829_mac.ko,
+	  xr829_core.ko, xr829_wlan.ko), which /etc/init.d/wpa_supplicant
+	  loads when Wi-Fi is switched on.
 
 	  Built outside Buildroot with the kernel they belong to, by make
 	  brick-kernel (scripts/build-brick-kernel.sh), and taken from its

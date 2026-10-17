@@ -1,0 +1,18 @@
+config BR2_PACKAGE_XR829_FIRMWARE
+	bool "xr829-firmware"
+	help
+	  The firmware the TrimUI Brick's XR829 Wi-Fi and Bluetooth chip
+	  runs, which its drivers upload when the radio is switched on:
+	  boot_xr829.bin, fw_xr829.bin and sdd_xr829.bin for Wi-Fi (the
+	  Wi-Fi driver opens them in /lib/firmware by name), and
+	  fw_xr829_bt.bin for Bluetooth. The sdd file and the Bluetooth
+	  firmware are the ones for a 24 MHz crystal, the Brick's.
+
+	  XRadio's closed binaries, with no license stated: they are not
+	  part of plastron, are never committed, and come with no license
+	  from us. The build takes them from a folder mounted at
+	  /brick-xr829 (BRICK_XR829 in the Makefile, ~/brick-runtime/xr829
+	  by default), as Creality's Sonic Pad SDK has them
+	  (github.com/CrealityTech/sonic_pad_os at 7f37a7f,
+	  package/firmware/linux-firmware/xr829). The build checks each
+	  file against files.sha256 before installing anything.

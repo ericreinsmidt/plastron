@@ -48,16 +48,22 @@ base: builder volume
 # come from BRICK_GPU, the userspace half of DDK 1.11@5516664 from the Sonic
 # Pad SDK (lib64/ and include/), mounted at /brick-gpu.
 BRICK_GPU ?= $(HOME)/brick-runtime/gpu-ddk-1.11
+# And XRadio's firmware for its XR829 Wi-Fi and Bluetooth chip, closed the same
+# way: from BRICK_XR829, mounted at /brick-xr829 (package/xr829-firmware)
+BRICK_XR829 ?= $(HOME)/brick-runtime/xr829
 # Its kernel and modules come from make brick-kernel, in this volume.
 brick: builder volume
 	@[ -d "$(BRICK_GPU)/lib64" ] || { echo "no GPU libraries in $(BRICK_GPU): the Brick needs" \
 		"Imagination's PowerVR DDK 1.11@5516664 userspace libraries for the GE8300," \
 		"which plastron doesn't include (buildroot/package/pvr-ge8300/Config.in" \
 		"says which files and where they go)" >&2; exit 1; }
+	@[ -f "$(BRICK_XR829)/fw_xr829.bin" ] || { echo "no XR829 firmware in $(BRICK_XR829): the" \
+		"Brick's Wi-Fi needs XRadio's firmware files, which plastron doesn't include" \
+		"(buildroot/package/xr829-firmware/Config.in says which and where from)" >&2; exit 1; }
 	@docker run --rm -v $(VOLUME):/work $(IMAGE) test -f /work/brick-kernel/images/pvrsrvkm.ko || \
 		{ echo "no Brick kernel modules yet: make brick-kernel first" >&2; exit 1; }
 	docker run --rm -t -e FLAVOR=brick -v $(CURDIR):/src:ro $(SOURCES) \
-		-v $(BRICK_GPU):/brick-gpu:ro \
+		-v $(BRICK_GPU):/brick-gpu:ro -v $(BRICK_XR829):/brick-xr829:ro \
 		-v $(VOLUME):/work $(IMAGE) sh /src/scripts/build.sh $(BRICK_TARGET)
 	$(if $(BRICK_TARGET),,$(MAKE) copy-out OUTPUT=output-brick CARD=brick-sdcard.img)
 
