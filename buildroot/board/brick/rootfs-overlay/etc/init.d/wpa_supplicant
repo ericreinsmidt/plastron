@@ -1,0 +1,55 @@
+#!/bin/sh
+# Wi-Fi on and off, as TortOS asks (src/wifi.c: start, stop). On: the XR829's
+# modules, whose loading powers the chip and uploads its firmware, then wlan0
+# and wpa_supplicant, its control socket in /var/run/wpa_supplicant and its
+# saved networks on the card, so they outlive system updates. Off: the
+# supplicant and any DHCP client gone, and the chip powered off again: a
+# radio left on is battery spent.
+#
+# The supplicant is found by its PID file and its socket, never by name: this
+# script is called wpa_supplicant too, so pidof found the script itself and
+# start never started it, and killall killed the script before it got to
+# switching the chip off.
+M=/usr/lib/brick
+CONF=${USERDATA_PATH:-/mnt/SDCARD/.userdata/brick}/wifi/wpa_supplicant.conf
+PID=/var/run/wpa_supplicant.pid
+
+start() {
+	for m in cfg80211 xr829_mac xr829_core xr829_wlan; do
+		grep -q "^$m " /proc/modules || insmod $M/$m.ko || return 1
+	done
+	for i in $(seq 1 50); do
+		[ -d /sys/class/net/wlan0 ] && break
+		sleep 0.1
+	done
+	ifconfig wlan0 up || return 1
+	mkdir -p "${CONF%/*}"
+	[ -f "$CONF" ] ||
+		printf 'ctrl_interface=/var/run/wpa_supplicant\nupdate_config=1\n' > "$CONF"
+	wpa_cli -i wlan0 ping > /dev/null 2>&1 ||
+		wpa_supplicant -B -i wlan0 -D nl80211 -c "$CONF" -P $PID
+}
+
+stop() {
+	p=$(cat $PID 2> /dev/null)
+	if [ -n "$p" ]; then
+		kill "$p" 2> /dev/null
+		# Gone before wlan0 goes down and the module out, or both are busy
+		for i in $(seq 1 20); do
+			[ -d "/proc/$p" ] || break
+			sleep 0.1
+		done
+		rm -f $PID
+	fi
+	killall -q udhcpc
+	ifconfig wlan0 down 2> /dev/null
+	# The chip's power goes with this module (sunxi-wlan)
+	rmmod xr829_wlan 2> /dev/null
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; start ;;
+	*) echo "usage: $0 start|stop|restart" >&2; exit 1 ;;
+esac

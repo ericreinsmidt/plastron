@@ -46,6 +46,14 @@ BR2_PACKAGE_SDL2_OPENGLES=y
 # Sound: TortOS, Muse and diatom (through SDL2) talk to ALSA directly
 BR2_PACKAGE_ALSA_LIB=y
 
+# Wi-Fi: wpa_supplicant and wpa_cli, which TortOS drives (src/wifi.c), over
+# nl80211 as the XR829 driver is a cfg80211 one. WPA3 for networks that need
+# it; it brings in OpenSSL, which curl needs anyway.
+BR2_PACKAGE_WPA_SUPPLICANT=y
+BR2_PACKAGE_WPA_SUPPLICANT_NL80211=y
+BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
+BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
+
 # Libraries TortOS and Diatom load, as on the Pixel: SDL2_image with PNG and
 # JPEG, SDL2_ttf, sqlite, zlib, FFmpeg for Muse
 BR2_PACKAGE_SDL2_IMAGE=y
