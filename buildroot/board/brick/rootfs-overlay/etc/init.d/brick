@@ -155,6 +155,12 @@ start() {
 	insmod $L/dc_sunxi.ko
 	mark "gpu display"
 
+	# The mute switch (PH19), exported for TortOS, which reads
+	# /sys/class/gpio/gpio243/value: 1 when down. The direction is what makes
+	# the pin an input: exported alone it stays disabled and reads a stale 1
+	[ -d /sys/class/gpio/gpio243 ] || echo 243 > /sys/class/gpio/export
+	echo in > /sys/class/gpio/gpio243/direction
+
 	start_tortos
 	mark tortos
 	start_usb
