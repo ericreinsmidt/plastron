@@ -56,12 +56,15 @@ make -s -C "$GPU/img-rgx/linux/rogue_km/build/linux/sunxi_linux" \
 
 G=$GPU/img-rgx/linux/rogue_km/binary_sunxi_linux_nullws_release/target_aarch64
 cp "$OUT/arch/arm64/boot/Image" "$IMAGES/"
-# The gamepad, the GPU's driver and the XR829's Wi-Fi driver (its own 802.11
-# layer, xr829_mac, takes mac80211's place)
+# The gamepad, the GPU's driver, the XR829's Wi-Fi driver (its own 802.11
+# layer, xr829_mac, takes mac80211's place) and its Bluetooth: the core, the
+# UART transport and XRadio's two helpers
 W=$OUT/drivers/net/wireless/xr829
 for m in "$OUT/drivers/input/joystick/brick-pad.ko" "$G/pvrsrvkm.ko" "$G/dc_sunxi.ko" \
 	"$OUT/net/wireless/cfg80211.ko" "$W/umac/xr829_mac.ko" "$W/wlan/xr829_core.ko" \
-	"$W/wlan/xr829_wlan.ko"; do
+	"$W/wlan/xr829_wlan.ko" "$OUT/net/bluetooth/bluetooth.ko" \
+	"$OUT/drivers/bluetooth/hci_uart.ko" "$OUT/drivers/bluetooth/xradio_btlpm.ko" \
+	"$OUT/drivers/bluetooth/xradio_btfdi.ko"; do
 	strip --strip-debug -o "$IMAGES/$(basename "$m")" "$m"
 done
 dtc -q -I dts -O dtb -o "$IMAGES/brick.dtb" /src/buildroot/board/brick/dts/sun50iw10p1-trimui-brick.dts

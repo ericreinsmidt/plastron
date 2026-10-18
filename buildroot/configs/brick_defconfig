@@ -64,6 +64,17 @@ BR2_PACKAGE_LIBCURL=y
 BR2_PACKAGE_LIBCURL_CURL=y
 BR2_PACKAGE_LIBCURL_OPENSSL=y
 
+# Bluetooth: BlueZ with bluetoothctl and the tools TortOS runs (hcitool,
+# hciconfig) and hciattach, which attaches the XR829's Bluetooth over its UART
+# (board/brick/patches/bluez5_utils: Allwinner's xradio type, ported)
+BR2_PACKAGE_BLUEZ5_UTILS=y
+BR2_PACKAGE_BLUEZ5_UTILS_CLIENT=y
+BR2_PACKAGE_BLUEZ5_UTILS_TOOLS=y
+BR2_PACKAGE_BLUEZ5_UTILS_DEPRECATED=y
+# Sound to Bluetooth headsets: bluealsa (A2DP source, HFP gateway) and its
+# ALSA plugin, which TortOS's .asoundrc names (bt-alsa.sh)
+BR2_PACKAGE_BLUEZ_ALSA=y
+
 # Libraries TortOS and Diatom load, as on the Pixel: SDL2_image with PNG and
 # JPEG, SDL2_ttf, sqlite, zlib, FFmpeg for Muse
 BR2_PACKAGE_SDL2_IMAGE=y

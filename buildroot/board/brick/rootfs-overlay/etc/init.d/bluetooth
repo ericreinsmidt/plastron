@@ -1,0 +1,85 @@
+#!/bin/sh
+# Bluetooth on and off: the XR829's Bluetooth over its UART (ttyS1), BlueZ and
+# bluez-alsa, for TortOS's Bluetooth menu and headsets. On: the modules, dbus,
+# the chip attached by hciattach (Allwinner's xradio type, which powers it
+# through rfkill and uploads its firmware), hci0 up, bluetoothd and bluealsa.
+# Off: those stopped and the radio powered off: a radio left on is battery
+# spent. Each daemon is found by its PID file, never by name, as in
+# /etc/init.d/wpa_supplicant.
+M=/usr/lib/brick
+RFKILL=/sys/class/rfkill/rfkill0/state
+RUN=/var/run
+
+running() {
+	p=$(cat "$1" 2> /dev/null)
+	[ -n "$p" ] && [ -d "/proc/$p" ]
+}
+
+# name: the PID file's; then the command, which must stay in the foreground
+daemon() {
+	n=$1
+	shift
+	running $RUN/$n.pid && return 0
+	"$@" > /dev/null 2>&1 &
+	echo $! > $RUN/$n.pid
+}
+
+stopd() {
+	p=$(cat $RUN/$1.pid 2> /dev/null)
+	if [ -n "$p" ]; then
+		kill "$p" 2> /dev/null
+		for i in $(seq 1 20); do
+			[ -d "/proc/$p" ] || break
+			sleep 0.1
+		done
+	fi
+	rm -f $RUN/$1.pid
+}
+
+# A clean attach takes about 5 s (measured). A failed one leaves the chip
+# wedged until its power is cycled (TrimUI's notes, 2026-09-03), so up to
+# three tries with a cycle between
+attach() {
+	for try in 1 2 3; do
+		daemon hciattach hciattach -n -t 20 ttyS1 xradio
+		for i in $(seq 1 75); do
+			[ -d /sys/class/bluetooth/hci0 ] && return 0
+			sleep 0.2
+		done
+		stopd hciattach
+		echo 0 > $RFKILL
+		sleep 2
+		echo 1 > $RFKILL
+		sleep 2
+	done
+	return 1
+}
+
+start() {
+	for m in bluetooth hci_uart xradio_btlpm xradio_btfdi; do
+		grep -q "^$m " /proc/modules || insmod $M/$m.ko || return 1
+	done
+	if ! running $RUN/dbus.pid; then
+		mkdir -p /run/dbus
+		daemon dbus dbus-daemon --system --nofork --nopidfile
+	fi
+	[ -d /sys/class/bluetooth/hci0 ] || attach || return 1
+	hciconfig hci0 up || return 1
+	daemon bluetoothd /usr/libexec/bluetooth/bluetoothd
+	daemon bluealsa bluealsa -S -p a2dp-source -p hfp-ag --a2dp-volume
+}
+
+stop() {
+	stopd bluealsa
+	stopd bluetoothd
+	stopd hciattach
+	rm -f /tmp/tortos_btsink
+	echo 0 > $RFKILL 2> /dev/null
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; start ;;
+	*) echo "usage: $0 start|stop|restart" >&2; exit 1 ;;
+esac
