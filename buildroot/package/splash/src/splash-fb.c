@@ -16,12 +16,13 @@
  * drawing through the GPU, takes the screen in two steps: when it sets up EGL
  * the pan moves to the first of EGL's own pages, still empty, and about 0.6 s
  * later its first present moves it again. The first move, before TortOS has
- * logged its renderer, is undone: the pan goes straight back to this page and
- * the animation goes on. EGL's pages are never written to: followed into one
- * instead, the turtle stayed under TortOS's first frames as they faded in,
+ * said it is presenting, is undone: the pan goes straight back to this page
+ * and the animation goes on. EGL's pages are never written to: followed into
+ * one instead, the turtle stayed under TortOS's first frames as they faded in,
  * as TortOS draws them over what its buffer held (tried 2026-10-13). A move
- * after that is TortOS's first frame, and this stops at once. So TortOS needs
- * to know nothing about it.
+ * after that is TortOS's first frame, and this stops at once. TortOS says so
+ * with a SIGUSR1 just before its first present, as on the Pixel 2; it used to
+ * be its renderer's line in /tmp/tortos.log, and the log is on the card now.
  *
  * EGL's setup clears the framebuffer's pages, this one too, so after each
  * frame the page is spot-checked against the frame and written again whole if
@@ -35,6 +36,7 @@
  */
 #include <fcntl.h>
 #include <linux/fb.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +49,6 @@
 #include <zlib.h>
 
 #define FRAMES     "/usr/share/splash/frames.bin"
-#define TORTOS_LOG "/tmp/tortos.log"   /* where /etc/init.d/brick sends it */
 #define BACKGROUND 0xff111310   /* the Brick's boot screen, if there are no frames */
 
 /* Seconds since the kernel started, as the kernel log counts them */
@@ -147,17 +148,13 @@ static uint32_t pan_now(int fd)
 	return ioctl(fd, FBIOGET_VSCREENINFO, &var) == 0 ? var.yoffset : (uint32_t)-1;
 }
 
-/* TortOS has made its renderer: from here a pan is its first frame */
-static int tortos_has_renderer(void)
-{
-	char text[4096];
-	int fd = open(TORTOS_LOG, O_RDONLY | O_CLOEXEC);
-	ssize_t n = fd >= 0 ? read(fd, text, sizeof(text) - 1) : -1;
+/* TortOS is about to present (its SIGUSR1): from here a pan is its first frame */
+static volatile sig_atomic_t tortos_presenting;
 
-	if (fd >= 0) close(fd);
-	if (n <= 0) return 0;
-	text[n] = 0;
-	return strstr(text, "renderer:") != NULL;
+static void on_tortos(int sig)
+{
+	(void)sig;
+	tortos_presenting = 1;
 }
 
 /*
@@ -170,7 +167,7 @@ static int still_ours(int fd, uint32_t yoffset, int *took_back)
 	uint32_t now = pan_now(fd);
 
 	if (now == yoffset) return 1;
-	if (now == (uint32_t)-1 || *took_back || tortos_has_renderer()) return 0;
+	if (now == (uint32_t)-1 || *took_back || tortos_presenting) return 0;
 	*took_back = 1;
 	if (ioctl(fd, FBIOGET_VSCREENINFO, &var)) return 0;
 	var.xoffset = 0;
@@ -180,6 +177,11 @@ static int still_ours(int fd, uint32_t yoffset, int *took_back)
 
 int main(void)
 {
+	/* First: SIGUSR1 left at its default would end this */
+	struct sigaction on = { .sa_handler = on_tortos };
+	sigemptyset(&on.sa_mask);
+	sigaction(SIGUSR1, &on, NULL);
+
 	int fd = open("/dev/fb0", O_RDWR | O_CLOEXEC);
 	struct fb_var_screeninfo var;
 	struct fb_fix_screeninfo fix;
