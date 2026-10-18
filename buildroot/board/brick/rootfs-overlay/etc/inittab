@@ -5,7 +5,7 @@
 ::sysinit:/bin/mount -t proc proc /proc
 ::sysinit:/bin/mkdir -p /dev/pts /dev/shm
 ::sysinit:/bin/mount -a
-# The card, the GPU, the pad, then Diatom and TortOS in the background, and
+# The card, the GPU, the pad, then TortOS's launch.sh in the background, and
 # the USB link: see the script
 ::sysinit:/etc/init.d/brick start
 ::sysinit:/bin/mkdir -p /run/lock/subsys

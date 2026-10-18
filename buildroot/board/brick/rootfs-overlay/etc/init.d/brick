@@ -1,6 +1,7 @@
 #!/bin/sh
 # The Brick's start, from inittab's sysinit, after the mounts: the card, the
-# GPU, the pad, Diatom and TortOS, and the USB cable's network for bring-up.
+# GPU, the pad, TortOS (the card's launch.sh, as on the Pixel 2), and the USB
+# cable's network for bring-up.
 # What the bring-up's rdinit did, less what an initramfs needed: the
 # libraries are in /usr/lib with real links, the GPU's
 # firmware and powervr.ini come with pvr-ge8300, the ALSA configuration with
@@ -68,10 +69,11 @@ games_create() {
 # TortOS onto the card from the image (/usr/share/tortos/card): on the first
 # boot, whenever it goes missing, and when the image's is newer, never an older
 # one over a newer, as the Pixel 2's /etc/init.d/tortos does. Only adds: the
-# player's games, saves and TortOS's own state stay. tortos.elf goes last,
+# player's games, saves and TortOS's own state stay. launch.sh goes last,
 # after a sync, so a copy cut short starts over at the next boot. SEED_V is
 # the image's version, written in by board/brick/post-build.sh.
 SEED=/usr/share/tortos/card
+LAUNCH=$SDCARD/TortOS/launch.sh
 SEED_V=
 version_of() {
 	v=
@@ -83,24 +85,24 @@ version_of() {
 	v=$((a * 1000000 + b * 1000 + ${c:-0}))
 }
 tortos_seed() {
-	[ -f $SEED/TortOS/tortos.elf ] || return
-	if [ -f $SDCARD/TortOS/tortos.elf ]; then
+	[ -f $SEED/TortOS/launch.sh ] || return
+	if [ -f $LAUNCH ]; then
 		[ -n "$SEED_V" ] || return
 		version_of $SDCARD/TortOS/VERSION && [ "$SEED_V" -le "$v" ] && return
 		echo "brick: the image carries a newer TortOS than the card; copying it" > /dev/kmsg
-		rm -f $SDCARD/TortOS/tortos.elf
+		rm -f $LAUNCH
 	else
 		echo "brick: no TortOS on the card; copying it from the image" > /dev/kmsg
 	fi
 	mkdir -p $SDCARD/TortOS
 	for f in $SEED/TortOS/* $SEED/TortOS/.[!.]*; do
-		[ -e "$f" ] && [ "${f##*/}" != tortos.elf ] && cp -R "$f" $SDCARD/TortOS/
+		[ -e "$f" ] && [ "${f##*/}" != launch.sh ] && cp -R "$f" $SDCARD/TortOS/
 	done
 	for d in $SEED/*; do
 		[ "${d##*/}" != TortOS ] && cp -R "$d" $SDCARD/
 	done
 	sync
-	cp $SEED/TortOS/tortos.elf $SDCARD/TortOS/ && sync
+	cp $SEED/TortOS/launch.sh $LAUNCH && sync
 	echo "brick: TortOS copied onto the card" > /dev/kmsg
 }
 
@@ -114,17 +116,20 @@ start() {
 	# TortOS's boot animation, first: it draws from the moment the
 	# framebuffer exists and steps aside when TortOS draws (splash-fb.c)
 	splash &
+	splash=$!
 	watchdog -t 4 /dev/watchdog 2>/dev/null
 	mark init
 
 	# The boot at full speed: the performance governor until TortOS has
 	# drawn its first frame, then ondemand, which otherwise starts at 408 MHz
-	# and is still ramping up while TortOS starts
+	# and is still ramping up while TortOS starts. The splash ends at that
+	# first frame, so its going is the sign; it gives up by itself if TortOS
+	# never draws, after 15 s, and 20 s here is the bound past that
 	G=/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
 	(
 		for i in $(seq 1 200); do [ -w $G ] && break; sleep 0.01; done
 		echo performance > $G
-		for i in $(seq 1 300); do grep -q "first frame" /tmp/tortos.log 2>/dev/null && break; sleep 0.05; done
+		for i in $(seq 1 400); do [ -d /proc/$splash ] || break; sleep 0.05; done
 		echo ondemand > $G
 		mark "governor: ondemand"
 	) &
@@ -167,32 +172,17 @@ start() {
 	mark usb
 }
 
-# Diatom, then TortOS again whenever it ends, as launch.sh does, until it asks
-# for the power to go off (Auto Off, or the power key)
+# TortOS: the card's launch.sh, which starts Diatom and TortOS, keeps them
+# running and powers off when TortOS asks (Auto Off, or the power key), as
+# the Pixel 2's /etc/init.d/tortos runs it. Its pid for stop. With no
+# launch.sh the splash stays; the power key's long press still cuts the power
 start_tortos() {
-	export TORTOS_DIR=$SDCARD/TortOS PLATFORM=tg3040 DEVICE=brick SDCARD_PATH=$SDCARD
-	export BIOS_PATH=$SDCARD/Bios ROMS_PATH=$SDCARD/Roms SAVES_PATH=$SDCARD/Saves CHEATS_PATH=$SDCARD/Cheats
-	export SYSTEM_PATH=$TORTOS_DIR CORES_PATH=$TORTOS_DIR/cores
-	export USERDATA_PATH=$SDCARD/.userdata/tg3040 SHARED_USERDATA_PATH=$SDCARD/.userdata/shared
-	export LOGS_PATH=$USERDATA_PATH/logs HOME=$USERDATA_PATH
-	export SDL_VIDEODRIVER=pvrfb SDL_RENDER_DRIVER=opengles2
-	export TORTOS_DIATOM_SOCKET=/tmp/diatom.sock
-	mkdir -p $LOGS_PATH $SHARED_USERDATA_PATH
-	cd $TORTOS_DIR
-	./diatom --socket $TORTOS_DIATOM_SOCKET --cores $CORES_PATH \
-		--save $SAVES_PATH --system $BIOS_PATH > /tmp/diatom.log 2>&1 &
-	(
-		while true; do
-			rm -f /tmp/tortos_poweroff
-			$L/backlight on
-			./tortos.elf >> /tmp/tortos.log 2>&1
-			[ -f /tmp/tortos_poweroff ] && break
-			sleep 0.5
-		done
-		poweroff
-	) &
-	echo $! > /tmp/tortos-loop.pid
-	cd /
+	if [ -f $LAUNCH ]; then
+		sh $LAUNCH < /dev/null > /dev/null 2>&1 &
+		echo $! > /tmp/tortos-loop.pid
+	else
+		echo "brick: no $LAUNCH; the splash stays" > /dev/kmsg
+	fi
 }
 
 # USB for bring-up: a network link on the cable, the Brick at 10.55.0.2 and
@@ -225,7 +215,7 @@ start_usb() {
 	fi
 }
 
-# TortOS and Diatom ahead of everything else at shutdown: the loop first, or
+# TortOS and Diatom ahead of everything else at shutdown: launch.sh first, or
 # it starts TortOS again
 stop() {
 	[ -f /tmp/tortos-loop.pid ] && kill $(cat /tmp/tortos-loop.pid) 2>/dev/null
