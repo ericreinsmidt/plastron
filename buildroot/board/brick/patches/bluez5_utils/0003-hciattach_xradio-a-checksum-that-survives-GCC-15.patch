@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] hciattach_xradio: a checksum that survives GCC 15
+
+check_sum16 read the packet back through an unsigned short pointer right
+after the packet's struct fields were written, which C's aliasing rules
+allow the compiler to reorder: built with GCC 15 at -O2, every firmware
+block went out with a stale checksum, the chip answered each with
+MB_ERR_CHECKSUM (resp error flag, type 3), never started the firmware, and
+never answered HCI Reset. Summed a byte pair at a time instead: the same
+little-endian halfwords, no aliasing. Tested on the TrimUI Brick: no
+checksum errors, the firmware starts, hci0 comes up.
+---
+--- a/tools/hciattach_xradio.c
++++ b/tools/hciattach_xradio.c
+@@ -400,15 +400,19 @@
+ static unsigned short check_sum16(unsigned char *data, unsigned int len)
+ {
+     unsigned short cs = 0;
+-    unsigned short *p = (unsigned short*)data;
+ 
+-    while(len > 1) {
+-        cs += *p++;
++    /* The halfwords a byte pair at a time, little-endian as the chip sums
++     * them, not through an unsigned short pointer: the buffers are filled
++     * through their structs' wider fields, and reading them back as shorts
++     * breaks C's aliasing rules, so GCC 15 summed them before the writes
++     * landed and the chip refused every firmware block (checksum error) */
++    while (len > 1) {
++        cs += data[0] | (data[1] << 8);
++        data += 2;
+         len -= 2;
+     }
+-    if (len) {
+-        cs += *(unsigned char*)p;
+-    }
++    if (len)
++        cs += *data;
+ 
+     return cs;
+ }

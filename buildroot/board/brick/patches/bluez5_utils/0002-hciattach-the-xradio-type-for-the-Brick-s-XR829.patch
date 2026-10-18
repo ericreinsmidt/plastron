@@ -1,0 +1,99 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] hciattach: the xradio type, for the TrimUI Brick's XR829
+
+hciattach -n ttyS1 xradio, as on Allwinner's systems: the xradio entry in
+the type table and xradio_init declared beside the others, and
+hciattach_xradio.c built. Allwinner's port changed init_uart for every type
+(no CLOCAL, 8N1, no break, and none of the final speed, line discipline and
+protocol, which xradio_init sets itself); here only for xradio, so the other
+types stay as upstream has them.
+---
+--- a/Makefile.tools
++++ b/Makefile.tools
+@@ -421,7 +421,8 @@
+ 						tools/hciattach_ath3k.c \
+ 						tools/hciattach_qualcomm.c \
+ 						tools/hciattach_intel.c \
+-						tools/hciattach_bcm43xx.c
++						tools/hciattach_bcm43xx.c \
++						tools/hciattach_xradio.c
+ tools_hciattach_LDADD = lib/libbluetooth-internal.la
+ 
+ tools_hciconfig_SOURCES = tools/hciconfig.c
+--- a/tools/hciattach.h
++++ b/tools/hciattach.h
+@@ -60,3 +60,5 @@
+ int intel_init(int fd, int init_speed, int *speed, struct termios *ti);
+ int bcm43xx_init(int fd, int def_speed, int speed, struct termios *ti,
+ 		const char *bdaddr);
++int xradio_init(int fd, int def_speed, int speed, struct termios *ti,
++		const char *bdaddr);
+--- a/tools/hciattach.c
++++ b/tools/hciattach.c
+@@ -265,6 +265,11 @@
+ static int bcm43xx(int fd, struct uart_t *u, struct termios *ti)
+ {
+ 	return bcm43xx_init(fd, u->init_speed, u->speed, ti, u->bdaddr);
++}
++
++static int xradio(int fd, struct uart_t *u, struct termios *ti)
++{
++	return xradio_init(fd, u->init_speed, u->speed, ti, u->bdaddr);
+ }
+ 
+ static int read_check(int fd, void *buf, int count)
+@@ -1078,6 +1083,11 @@
+ 	/* Broadcom BCM43XX */
+ 	{ "bcm43xx",    0x0000, 0x0000, HCI_UART_H4,   115200, 3000000,
+ 				FLOW_CTL, DISABLE_PM, NULL, bcm43xx, NULL  },
++
++	/* XRadio's XR829 (Allwinner): xradio_init loads the firmware, sets the
++	 * speed, the line discipline and the protocol itself */
++	{ "xradio",     0x0000, 0x0000, HCI_UART_H4,   115200, 1500000,
++				0, DISABLE_PM, NULL, xradio, NULL },
+ 
+ 	{ "ath3k",    0x0000, 0x0000, HCI_UART_ATH3K, 115200, 115200,
+ 			FLOW_CTL, DISABLE_PM, NULL, ath3k_ps, ath3k_pm  },
+@@ -1127,6 +1137,7 @@
+ 	struct termios ti;
+ 	int fd, i;
+ 	unsigned long flags = 0;
++	int xr = !strcmp(u->type, "xradio");
+ 
+ 	if (raw)
+ 		flags |= 1 << HCI_UART_RAW_DEVICE;
+@@ -1149,7 +1160,13 @@
+ 
+ 	cfmakeraw(&ti);
+ 
+-	ti.c_cflag |= CLOCAL;
++	/* The XR829 wants modem control lines honored (no CLOCAL) and 8N1
++	 * set outright, as Allwinner's port of this tool does */
++	if (xr) {
++		ti.c_cflag |= CS8;
++		ti.c_cflag &= ~(PARENB | PARODD | CSTOPB);
++	} else
++		ti.c_cflag |= CLOCAL;
+ 	if (u->flags & FLOW_CTL)
+ 		ti.c_cflag |= CRTSCTS;
+ 	else
+@@ -1168,13 +1185,17 @@
+ 
+ 	tcflush(fd, TCIOFLUSH);
+ 
+-	if (send_break) {
++	if (send_break && !xr) {
+ 		tcsendbreak(fd, 0);
+ 		usleep(500000);
+ 	}
+ 
+ 	if (u->init && u->init(fd, u, &ti) < 0)
+ 		goto fail;
++
++	/* xradio_init has done the rest: speed, line discipline, protocol */
++	if (xr)
++		return fd;
+ 
+ 	tcflush(fd, TCIOFLUSH);
+ 
