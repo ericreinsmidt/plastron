@@ -1,0 +1,38 @@
+GLES2 renderer: only the vertex shader is compiled when the renderer is
+created; the fragment shaders are compiled on first use, as
+GLES2_SelectProgram already does for any it doesn't have. Compiling all 16
+up front, 11 of them for YUV, NV12 and NV21 video formats TortOS never
+draws, took about 110 ms of every start on the TrimUI Brick's GPU (three
+cold boots, 2026-10-19).
+
+--- a/src/render/opengles2/SDL_render_gles2.c
++++ b/src/render/opengles2/SDL_render_gles2.c
+@@ -580,21 +580,15 @@
+ 
+ static int GLES2_CacheShaders(GLES2_RenderData *data)
+ {
+-    int shader;
+-
+     data->texcoord_precision_hint = GLES2_GetTexCoordPrecisionEnumFromHint();
+-
+-    for (shader = 0; shader < GLES2_SHADER_FRAGMENT_TEXTURE_EXTERNAL_OES; ++shader) {
+-        GLenum shader_type;
+ 
+-        if (shader == GLES2_SHADER_VERTEX_DEFAULT) {
+-            shader_type = GL_VERTEX_SHADER;
+-        } else {
+-            shader_type = GL_FRAGMENT_SHADER;
+-        }
+-        if (!GLES2_CacheShader(data, (GLES2_ShaderType)shader, shader_type)) {
+-            return -1;
+-        }
++    /* Only the vertex shader, which every program uses, so a compiler that
++     * doesn't work still fails here. The fragment shaders are compiled when
++     * something first draws with one (GLES2_SelectProgram): compiling all 16
++     * here, 11 of them for video formats TortOS never draws, took about 110
++     * ms of every start on the TrimUI Brick's GPU */
++    if (!GLES2_CacheShader(data, GLES2_SHADER_VERTEX_DEFAULT, GL_VERTEX_SHADER)) {
++        return -1;
+     }
+     return 0;
+ }
