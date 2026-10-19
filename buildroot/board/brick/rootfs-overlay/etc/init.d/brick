@@ -141,6 +141,21 @@ start() {
 		mark "governor: ondemand"
 	) &
 
+	# The GPU's own driver, then its display half (dc_sunxi), which waits
+	# for the panel to finish powering up: from here, in the background,
+	# beside the card's partition being found and mounted. Nothing needs them
+	# until TortOS's video setup, which waits for them if it has to
+	# (brick.c). Loaded beside launch.sh instead, they slowed whichever of its
+	# card reads met them, 30-60 ms on some boots; from here, this script's
+	# start to TortOS's main took 213-226 ms where it was 210-266 that way and
+	# 240 loading them in turn (three cold boots each, 2026-10-18)
+	(
+		insmod $L/pvrsrvkm.ko
+		mark gpu
+		insmod $L/dc_sunxi.ko
+		mark "gpu display"
+	) &
+
 	# The games partition: added over the rest of the card on the first boot
 	# of a freshly written card, checked when it wasn't unmounted cleanly,
 	# and given TortOS from the image when it has none or an older one
@@ -170,16 +185,6 @@ start() {
 
 	start_tortos
 	mark tortos
-	# The GPU's own driver, then its display half (dc_sunxi), which waits
-	# for the panel to finish powering up: while TortOS starts, as nothing
-	# needs them until its video setup, about 120 ms in, which waits for
-	# them if it has to (brick.c). Loaded before TortOS, they held its start
-	# back 20-25 ms (measured 2026-10-18: three cold boots, card mount to
-	# TortOS's main 152-164 ms where it was 180)
-	insmod $L/pvrsrvkm.ko
-	mark gpu
-	insmod $L/dc_sunxi.ko
-	mark "gpu display"
 	start_usb
 	mark usb
 }
