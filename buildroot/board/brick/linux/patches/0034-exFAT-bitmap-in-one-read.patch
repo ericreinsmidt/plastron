@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] exFAT reads its allocation bitmap in one go at mount: it read
+ it a sector at a time, waiting on the card for each, 474 waits on a 64 GB
+ card with 32 KB clusters, which put the games partition's mount about 100 ms
+ later than with 128 KB ones. Asked for all at once now, the reads merged,
+ before the same loop as before picks them up
+
+---
+--- a/fs/exfat/balloc.c
++++ b/fs/exfat/balloc.c
+@@ -47,6 +47,7 @@
+ static int exfat_allocate_bitmap(struct super_block *sb,
+ 		struct exfat_dentry *ep)
+ {
++	struct blk_plug plug;
+ 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
+ 	long long map_size;
+ 	unsigned int i, need_map_size;
+@@ -74,6 +75,14 @@
+ 		return -ENOMEM;
+ 
+ 	sector = exfat_cluster_to_sector(sbi, sbi->map_clu);
++	/* All of the bitmap asked for at once, merged into one read, before the
++	 * loop below waits on it a sector at a time: a sector per read was a
++	 * wait on the card for each of its 474 sectors on a 64 GB card with 32
++	 * KB clusters, about 100 ms of the Brick's boot */
++	blk_start_plug(&plug);
++	for (i = 0; i < sbi->map_sectors; i++)
++		sb_breadahead(sb, sector + i);
++	blk_finish_plug(&plug);
+ 	for (i = 0; i < sbi->map_sectors; i++) {
+ 		sbi->vol_amap[i] = sb_bread(sb, sector + i);
+ 		if (!sbi->vol_amap[i]) {
