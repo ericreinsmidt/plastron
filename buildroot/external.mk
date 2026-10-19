@@ -17,3 +17,12 @@ LINUX_PRE_BUILD_HOOKS += PX2_LINUX_ADD_DTS
 ifeq ($(BR2_PACKAGE_PVR_GE8300),y)
 SDL2_CONF_OPTS += --enable-video-pvrfb
 endif
+
+# The Brick's squashfs root with the boot's files first, in the order it reads
+# them (board/brick/squashfs-sort.txt), packed together at the image's front
+# so they come off the card in a few large reads. Here, as Buildroot's squashfs
+# options have no sort list (its compression options follow the compressor
+# and can't be set), and this file is read after fs/*.mk
+ifeq ($(BR2_PACKAGE_BRICK_ROOTSWITCH),y)
+ROOTFS_SQUASHFS_ARGS += -sort $(BR2_EXTERNAL_PX2_PATH)/board/brick/squashfs-sort.txt
+endif
