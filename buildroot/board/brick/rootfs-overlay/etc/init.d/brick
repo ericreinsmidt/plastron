@@ -107,6 +107,13 @@ tortos_seed() {
 }
 
 start() {
+	# The card read ahead 2 MB at a time rather than 128 KB, first, before
+	# anything below loads: the boot reads about 15 MB from the root before
+	# TortOS's first frame, mostly libraries, and at 128 KB that was 533
+	# small requests at about 24 MB/s on a card that does 65. At 2048 KB,
+	# 310, and TortOS's start 40-90 ms quicker; 4096 was no better
+	# (measured 2026-10-18, three cold boots each at 512, 1024, 2048, 4096).
+	echo 2048 > /sys/block/mmcblk0/queue/read_ahead_kb
 	# RCU grace periods expedited, as the kernel had them until now
 	# (RCU_EXPEDITE_BOOT): closing an input device waits for one, about
 	# 40 ms at the normal pace, and SDL's joystick setup closes each of the
