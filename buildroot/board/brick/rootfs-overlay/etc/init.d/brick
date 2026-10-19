@@ -42,28 +42,33 @@ part() {
 	done
 }
 
-# The card image holds the boot and root partitions; on its first boot the
-# rest of the card becomes the games partition, as the Pixel 2's datapart does:
-# right after root, on a 4 MiB boundary (the card's erase blocks), exFAT,
-# labeled TORTOS, named tortos in the GPT. The image's backup GPT sits at the
-# end of the image, not the card, so it moves to the card's end first.
+# The card image holds the boot, root and state partitions; on its first boot
+# the rest of the card becomes the games partition, as the Pixel 2's datapart
+# does: right after the image's last partition (the state one, or the root on
+# an older image), on a 4 MiB boundary (the card's erase blocks), exFAT,
+# labeled TORTOS, named tortos in the GPT, numbered after the others. The
+# image's backup GPT sits at the end of the image, not the card, so it moves
+# to the card's end first.
 games_create() {
 	card=/dev/mmcblk0
 	echo "brick: first boot, adding the games partition" > /dev/kmsg
-	root=/sys/class/block/$(basename $(part plastron-root))
-	start=$(( $(cat $root/start) + $(cat $root/size) ))
+	last=$(part plastron-state)
+	[ -n "$last" ] || last=$(part plastron-root)
+	last=/sys/class/block/${last##*/}
+	start=$(( $(cat $last/start) + $(cat $last/size) ))
 	start=$(( (start + 8191) / 8192 * 8192 ))
+	nr=$(( $(cat $last/partition) + 1 ))
 	sfdisk --quiet --relocate gpt-bak-std $card &&
 	echo "start=$start, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, name=tortos" |
 		sfdisk --quiet --append --no-reread $card &&
-	partx --add --nr 3 $card &&
-	mkfs.exfat -L TORTOS ${card}p3 > /dev/null || {
+	partx --add --nr $nr $card &&
+	mkfs.exfat -L TORTOS ${card}p$nr > /dev/null || {
 		echo "brick: couldn't add the games partition" > /dev/kmsg
 		return
 	}
 	: > /tmp/games-new
-	echo "brick: ${card}p3 formatted as exFAT, label TORTOS" > /dev/kmsg
-	echo ${card}p3
+	echo "brick: ${card}p$nr formatted as exFAT, label TORTOS" > /dev/kmsg
+	echo ${card}p$nr
 }
 
 # TortOS onto the card from the image (/usr/share/tortos/card): on the first

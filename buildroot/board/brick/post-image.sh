@@ -30,4 +30,12 @@ done
 # of unpacking. Image stays beside it, for U-Boot's own boot command.
 "$HOST_DIR/bin/lz4" -9 -f -q --no-frame-crc "$BINARIES_DIR/Image" "$BINARIES_DIR/Image.lz4"
 cp "$BOARD/bootloader/u-boot-sunxi-with-spl.bin" "$BINARIES_DIR/"
+# The state partition, empty: ext4, 16 MB, for what changes and has to last
+# (Bluetooth's pairings, volumes and address; init.d/bluetooth mounts it). The
+# same bytes every build: fixed UUID and hash seed, and the build's date
+rm -f "$BINARIES_DIR/state.ext4"
+dd if=/dev/zero of="$BINARIES_DIR/state.ext4" bs=1M count=0 seek=16 2> /dev/null
+E2FSPROGS_FAKE_TIME=$SOURCE_DATE_EPOCH "$HOST_DIR/sbin/mkfs.ext4" -q -F -L plastron-state \
+	-O ^64bit,^orphan_file -U 2d8f6a40-6c1e-4f5b-9e3a-706c61737465 \
+	-E hash_seed=2d8f6a40-6c1e-4f5b-9e3a-706c61737465 "$BINARIES_DIR/state.ext4"
 support/scripts/genimage.sh -c "$BOARD/genimage.cfg"

@@ -9,6 +9,24 @@
 M=/usr/lib/brick
 RFKILL=/sys/class/rfkill/rfkill0/state
 RUN=/var/run
+STATE=/var/lib/state
+
+# What Bluetooth keeps, on the card's plastron-state partition (ext4), as the
+# root is read-only: the pairings (/var/lib/bluetooth), the headsets' volumes
+# (/var/lib/bluealsa) and the adapter's address (/etc/bluetooth/xr_bt.conf),
+# links into it in the image. Mounted here and not at boot, as only Bluetooth
+# uses it and it starts after TortOS's first frame. Without it Bluetooth still
+# works, keeping nothing
+state() {
+	grep -q " $STATE " /proc/mounts && return 0
+	for p in /sys/class/block/mmcblk0p*; do
+		grep -q "^PARTNAME=plastron-state$" $p/uevent 2> /dev/null || continue
+		mount -t ext4 -o noatime /dev/${p##*/} $STATE &&
+			mkdir -p $STATE/bluetooth $STATE/bluealsa && return 0
+	done
+	echo "bluetooth: no plastron-state partition; nothing will be kept" > /dev/kmsg
+	return 1
+}
 
 running() {
 	p=$(cat "$1" 2> /dev/null)
@@ -56,6 +74,7 @@ attach() {
 }
 
 start() {
+	state
 	for m in bluetooth hci_uart xradio_btlpm xradio_btfdi; do
 		grep -q "^$m " /proc/modules || insmod $M/$m.ko || return 1
 	done

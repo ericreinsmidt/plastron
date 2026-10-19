@@ -19,3 +19,14 @@ find "$TARGET_DIR" -name .DS_Store -delete
 # squashfs root nothing can be made at boot, and init.d/brick's mkdir would
 # fail, leaving the card unmounted and TortOS with nowhere to start from
 mkdir -p "$TARGET_DIR/mnt/SDCARD"
+
+# Bluetooth's lasting state, on the plastron-state partition that
+# init.d/bluetooth mounts at /var/lib/state, as the root is read-only: the
+# pairings, the headsets' volumes, and the adapter's address (xr_bt.conf,
+# which hciattach makes at the first attach). Everything else that changes at
+# run time is already in the RAM filesystems (/var/run, /var/log, /var/lib/dbus)
+mkdir -p "${TARGET_DIR:?}/var/lib/state"
+rm -rf "${TARGET_DIR:?}/var/lib/bluetooth" "${TARGET_DIR:?}/var/lib/bluealsa"
+ln -s state/bluetooth "$TARGET_DIR/var/lib/bluetooth"
+ln -s state/bluealsa "$TARGET_DIR/var/lib/bluealsa"
+ln -sfn ../../var/lib/state/xr_bt.conf "$TARGET_DIR/etc/bluetooth/xr_bt.conf"
