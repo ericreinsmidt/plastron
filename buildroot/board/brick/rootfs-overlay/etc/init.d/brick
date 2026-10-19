@@ -157,15 +157,10 @@ start() {
 	# The time before the kernel, from the timer that counts from reset
 	[ -x $L/sincereset ] && $L/sincereset >> /tmp/boot-times
 
-	# The GPU's own driver now; its display half (dc_sunxi) after the pad,
-	# as it waits for the panel to finish powering up (about 0.85 s)
-	insmod $L/pvrsrvkm.ko
-	mark gpu
-	# The pad, after the volume keys, power key and jack, which keep event0-2
+	# The pad, after the volume keys, power key and jack, which keep event0-2:
+	# before TortOS, as Diatom opens it the moment it starts
 	insmod $L/brick-pad.ko
 	mark pad
-	insmod $L/dc_sunxi.ko
-	mark "gpu display"
 
 	# The mute switch (PH19), exported for TortOS, which reads
 	# /sys/class/gpio/gpio243/value: 1 when down. The direction is what makes
@@ -175,6 +170,16 @@ start() {
 
 	start_tortos
 	mark tortos
+	# The GPU's own driver, then its display half (dc_sunxi), which waits
+	# for the panel to finish powering up: while TortOS starts, as nothing
+	# needs them until its video setup, about 120 ms in, which waits for
+	# them if it has to (brick.c). Loaded before TortOS, they held its start
+	# back 20-25 ms (measured 2026-10-18: three cold boots, card mount to
+	# TortOS's main 152-164 ms where it was 180)
+	insmod $L/pvrsrvkm.ko
+	mark gpu
+	insmod $L/dc_sunxi.ko
+	mark "gpu display"
 	start_usb
 	mark usb
 }
