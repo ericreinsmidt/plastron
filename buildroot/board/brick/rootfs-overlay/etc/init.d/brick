@@ -46,9 +46,11 @@ part() {
 # the rest of the card becomes the games partition, as the Pixel 2's datapart
 # does: right after the image's last partition (the state one, or the root on
 # an older image), on a 4 MiB boundary (the card's erase blocks), exFAT,
-# labeled TORTOS, named tortos in the GPT, numbered after the others. The
-# image's backup GPT sits at the end of the image, not the card, so it moves
-# to the card's end first.
+# labeled TORTOS, named tortos in the GPT, numbered after the others. 32 KB
+# clusters: Linux reads a folder a whole cluster at a time, and mkfs.exfat's
+# own choice, 128 KB on a 64 GB card, made every folder TortOS reads at boot
+# cost 128 KB of card. The image's backup GPT sits at the end of the image,
+# not the card, so it moves to the card's end first.
 games_create() {
 	card=/dev/mmcblk0
 	echo "brick: first boot, adding the games partition" > /dev/kmsg
@@ -62,7 +64,7 @@ games_create() {
 	echo "start=$start, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, name=tortos" |
 		sfdisk --quiet --append --no-reread $card &&
 	partx --add --nr $nr $card &&
-	mkfs.exfat -L TORTOS ${card}p$nr > /dev/null || {
+	mkfs.exfat -c 32K -L TORTOS ${card}p$nr > /dev/null || {
 		echo "brick: couldn't add the games partition" > /dev/kmsg
 		return
 	}
