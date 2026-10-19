@@ -3279,6 +3279,9 @@
 			cap-sdio-irq;
 			ignore-pm-notify;
 			ctl-spec-caps = <0x08>;
+			/* The XR829's Wi-Fi: scanned when its driver has powered it
+			 * (kernel patch 0035), not at boot */
+			plastron,scan-when-asked;
 			phandle = <0x18b>;
 		};
 

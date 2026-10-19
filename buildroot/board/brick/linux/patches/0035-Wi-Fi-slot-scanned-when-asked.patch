@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] An SD slot marked plastron,scan-when-asked isn't scanned until
+ its device's driver asks (sunxi_mmc_rescan_card), for the Brick's Wi-Fi slot
+ (sdc1): its XR829 has no power until the Wi-Fi driver powers it and asks for
+ a scan, so the scan every slot gets at boot could find nothing, and with no
+ card detect on the slot it always ran, up to a second on some boots, the GPU
+ firmware loading only once it gave up
+
+---
+--- a/drivers/mmc/host/sunxi-mmc.h
++++ b/drivers/mmc/host/sunxi-mmc.h
+@@ -427,6 +427,9 @@
+ 	/*only use for MMC_CAP_NEEDS_POLL and SUNXI_DIS_KER_NAT_CD is on*/
+ 	u32 present;
+ 	u32 voltage_switching;
++	/* Reported empty until sunxi_mmc_rescan_card asks for a scan:
++	 * plastron,scan-when-asked */
++	bool scan_when_asked;
+ 
+ 	bool perf_enable;
+ 	struct device_attribute host_perf;
+--- a/drivers/mmc/host/sunxi-mmc.c
++++ b/drivers/mmc/host/sunxi-mmc.c
+@@ -1909,6 +1909,8 @@
+ 	int gpio_val = 0;
+ 	struct sunxi_mmc_host *host = mmc_priv(mmc);
+ 
++	if (host->scan_when_asked)
++		return 0;
+ 	if (!(mmc->caps & MMC_CAP_NEEDS_POLL)
+ 		|| ((mmc->caps & MMC_CAP_NEEDS_POLL)
+ 			&& !(host->ctl_spec_cap & SUNXI_DIS_KER_NAT_CD)))
+@@ -2535,6 +2537,12 @@
+ 		else
+ 			pin_config_set(SUNXI_R_PINCTRL, pin_name, config_set);
+ 	}
++	/* A slot whose device is powered by its own driver, which asks for a
++	 * scan once it is (sunxi_mmc_rescan_card), as the Brick's Wi-Fi does:
++	 * not scanned at boot, with nothing there to find. Without a card
++	 * detect it was, and the scan took up to a second on some boots */
++	if (of_property_read_bool(np, "plastron,scan-when-asked"))
++		host->scan_when_asked = true;
+ 	if (of_property_read_bool(np, "cap-erase"))
+ 		mmc->caps |= MMC_CAP_ERASE;
+ 	if (of_property_read_bool(np, "mmc-high-capacity-erase-size"))
+--- a/drivers/mmc/host/sunxi-mmc-export.c
++++ b/drivers/mmc/host/sunxi-mmc-export.c
+@@ -64,6 +64,7 @@
+ 			"%s:can't find the host\n", __func__);
+ 		return;
+ 	}
++	sunxi_hosts[id]->scan_when_asked = false;
+ 	mmc_detect_change(sunxi_hosts[id]->mmc, 0);
+ }
+ EXPORT_SYMBOL_GPL(sunxi_mmc_rescan_card);
