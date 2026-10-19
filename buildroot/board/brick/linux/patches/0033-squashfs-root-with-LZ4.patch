@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] squashfs with LZ4, for a read-only root that reads less off the
+ card: the boot is held back by the card from the root mount to TortOS's first
+ frame, and an LZ4 squashfs image is about half the bytes, with the boot's
+ files packed together in the order it reads them. One decompressor per CPU,
+ as several programs read the root at once while the Brick boots; no zlib,
+ which the image doesn't use
+
+---
+--- a/arch/arm64/configs/brick_defconfig
++++ b/arch/arm64/configs/brick_defconfig
+@@ -261,6 +261,10 @@
+ # CONFIG_PROC_PAGE_MONITOR is not set
+ CONFIG_TMPFS=y
+ CONFIG_TMPFS_POSIX_ACL=y
++CONFIG_SQUASHFS=y
++CONFIG_SQUASHFS_DECOMP_MULTI_PERCPU=y
++# CONFIG_SQUASHFS_ZLIB is not set
++CONFIG_SQUASHFS_LZ4=y
+ CONFIG_PSTORE=y
+ # CONFIG_PSTORE_DEFLATE_COMPRESS is not set
+ CONFIG_PSTORE_BLK=y
