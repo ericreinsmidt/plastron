@@ -27,6 +27,9 @@ if load mmc 0:1 ${kernel_comp_addr_r} Image.lz4 &&
 	fdt rsvmem add 0x40000000 0x40000
 	fdt set /soc@03000000/sdmmc@04022000 status disabled
 	fdt set /chosen brick,pll-cpux "${pllcpux}"
-	setenv bootargs console=ttyS0,115200 loglevel=1 rdinit=/rdinit cma=64M bootscr=1
+	# A new root waiting on the card (rootswitch applies it, then removes this
+	# marker): one look in this partition's folder
+	if size mmc 0:1 root-update; then setenv rootupdate " rootupdate=1"; else setenv rootupdate; fi
+	setenv bootargs console=ttyS0,115200 loglevel=1 rdinit=/rdinit cma=64M bootscr=1${rootupdate}
 	booti ${kernel_addr_r} ${ramdisk_addr_r}:${rdsize} ${fdt_addr_r}
 fi
