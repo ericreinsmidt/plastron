@@ -11,6 +11,11 @@ BRICK_ROOTSWITCH_LICENSE = GPL-2.0
 # Not in the root: it goes in the initramfs, with the boot files
 BRICK_ROOTSWITCH_INSTALL_TARGET = NO
 BRICK_ROOTSWITCH_INSTALL_IMAGES = YES
+# For board/brick/post-image.sh, which packs this with the other boot files and
+# compresses the kernel with host-lz4: Buildroot has no option for host-lz4
+# alone, and the build host's own lz4 would put a tool from outside the build
+# into what goes on the card
+BRICK_ROOTSWITCH_DEPENDENCIES = host-lz4
 
 define BRICK_ROOTSWITCH_BUILD_CMDS
 	$(TARGET_CC) -static -O2 -Wall -Wextra -o $(@D)/rdinit $(@D)/rootswitch.c

@@ -13,9 +13,13 @@ mw.l 0x03001060 0xa9002401; mw.l 0x03001068 0xa8003101; mw.l 0x03001078 0xa90427
 # /proc/device-tree/chosen/brick,pll-cpux
 setexpr.l pllcpux *0x03001000
 
-# The kernel uncompressed: LZ4 read in 200 ms less, but U-Boot took 265 ms
-# to unpack it (tried 2026-10-12)
-if load mmc 0:1 ${kernel_addr_r} Image &&
+# The kernel LZ4-compressed (Image.lz4, 4.1 MB for 8.8), unpacked straight to
+# where it runs: U-Boot reads the card at about 17 MB/s, and the smaller file
+# saves 194 ms of reading for 33 ms of unpacking (with U-Boot's patch 0010; it
+# took 213 before). Image stays on the card for U-Boot's own boot command,
+# which boots it if this fails
+if load mmc 0:1 ${kernel_comp_addr_r} Image.lz4 &&
+   unlz4 ${kernel_comp_addr_r} ${kernel_addr_r} 0x2000000 &&
    load mmc 0:1 ${ramdisk_addr_r} initramfs.cpio.gz && setenv rdsize ${filesize} &&
    load mmc 0:1 ${fdt_addr_r} brick.dtb; then
 	fdt addr ${fdt_addr_r}
