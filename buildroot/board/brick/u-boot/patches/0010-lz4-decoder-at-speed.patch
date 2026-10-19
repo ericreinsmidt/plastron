@@ -1,0 +1,60 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Date: Sun, 18 Oct 2026 23:00:00 -0400
+Subject: [PATCH] The LZ4 decoder at speed: its fixed-size copies as the
+ compiler's builtins, and the file at -O2 without -mstrict-align. Under
+ U-Boot's -fno-builtin each 8- and 16-byte copy in lz4.c's hot loop was a call
+ to the generic memcpy, a byte at a time for unaligned addresses, and the
+ TrimUI Brick's 8.76 MB kernel took 213 ms to unpack, more than its smaller
+ file saved in reading (194 ms). It runs only from the boot command, with the
+ MMU and caches on
+
+---
+ lib/Makefile      |  5 +++++
+ lib/lz4_wrapper.c | 15 +++++++++++++++
+ 2 files changed, 20 insertions(+)
+
+diff --git a/lib/Makefile b/lib/Makefile
+--- a/lib/Makefile
++++ b/lib/Makefile
+@@ -93,6 +93,11 @@
+ obj-$(CONFIG_$(PHASE_)LZO) += lzo/
+ obj-$(CONFIG_$(PHASE_)LZMA) += lzma/
+ obj-$(CONFIG_$(PHASE_)LZ4) += lz4_wrapper.o
++# The LZ4 decoder at speed, with lz4_wrapper.c's built-in copies: at -O2 and
++# without ARMv8's -mstrict-align, its fixed-size copies are a few unaligned
++# 8-byte loads and stores. It only runs from the boot command, with the MMU
++# and caches on, where unaligned access is fine.
++CFLAGS_lz4_wrapper.o := -O2 $(call cc-option,-mno-strict-align)
+ 
+ obj-$(CONFIG_$(PHASE_)LIB_RATIONAL) += rational.o
+ 
+diff --git a/lib/lz4_wrapper.c b/lib/lz4_wrapper.c
+--- a/lib/lz4_wrapper.c
++++ b/lib/lz4_wrapper.c
+@@ -9,7 +9,22 @@
+ #include <linux/types.h>
+ #include <asm/unaligned.h>
+ #include <u-boot/lz4.h>
++#include <linux/bug.h>
++#include <linux/string.h>
++#include <asm/sections.h>
+ 
++/*
++ * lz4.c's copies as the compiler's own. Its hot loop copies 16 bytes of
++ * literals, and 8 + 8 + 2 bytes of each match, with memcpy; under U-Boot's
++ * -fno-builtin every one was a call to the generic memcpy, which goes a byte
++ * at a time when the addresses aren't aligned, and in LZ4 they seldom are: on
++ * the TrimUI Brick 8.76 MB of kernel took 213 ms to unpack, more than the 194
++ * ms its smaller file saves in reading. Named as builtins, the fixed sizes
++ * compile to a few loads and stores, and the rest still call memcpy.
++ */
++#define memcpy(dst, src, n)	__builtin_memcpy(dst, src, n)
++#define memmove(dst, src, n)	__builtin_memmove(dst, src, n)
++
+ /* lz4.c is unaltered (except removing unrelated code) from github.com/Cyan4973/lz4. */
+ #include "lz4.c"	/* #include for inlining, do not link! */
+ 
+-- 
+2.0
+
