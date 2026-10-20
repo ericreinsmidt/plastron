@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] The AXP2202's first battery check after boot takes the battery
+ as found instead of resetting the fuel gauge: its state started at "no
+ battery", so the first check always saw one put in and reset the gauge,
+ which wiped the battery model the probe had just loaded and the mark that
+ says it's loaded. Every boot then loaded the model again (85 ms of I2C,
+ racing the SD card's power rails on the same bus) and the gauge lost what
+ it had learned. Later checks still reset it when the battery comes or goes;
+ the time since a change is kept between checks, where it was an
+ uninitialized local
+
+---
+--- a/drivers/power/supply/axp2202_charger.c
++++ b/drivers/power/supply/axp2202_charger.c
+@@ -1286,9 +1286,11 @@
+ 	int ret;
+ 	static int cnt;
+ 	static int rst[3] = { 1, 1, 1 };
++	static bool checked;
++	static ktime_t s_chg;
++	bool present;
+ 	unsigned int data;
+ 	uint8_t d[2];
+-	ktime_t s_chg;
+ 	struct axp2202_device_info *di =
+ 		container_of(work, typeof(*di), bat_chk.work);
+ 
+@@ -1317,7 +1319,23 @@
+ 	rst[cnt] = (((d[0] & GENMASK(5, 0)) << 0x08) | (d[1]));
+ 	if (rst[cnt] < AXP2202_VBAT_MIN)
+ 		rst[cnt] = 0;
++	present = rst[cnt] != 0;
+ 	cnt = ++cnt == 3 ? 0 : cnt;
++
++	/* The first check after the probe takes the battery as it finds it. A
++	 * battery there at boot is not one just put in, and resetting the gauge
++	 * for it, on every boot, wiped the battery model the probe had loaded,
++	 * the mark that says it's loaded (so every boot loaded it again, 85 ms
++	 * of I2C on the Brick) and what the gauge had learned. Later checks
++	 * still reset it when the battery comes or goes */
++	if (!checked) {
++		checked = true;
++		di->stat.bat_stat = present;
++		regmap_update_bits(di->regmap, AXP2202_MODULE_EN, BIT(2),
++				   present ? BIT(2) : 0);
++		WRITE_ONCE(di->stat.bat_read, present);
++		goto err_read;
++	}
+ 
+ 	/* there's one zero to indicate battery disconnect */
+ 	if (!rst[0] || !rst[1] || !rst[2]) {
