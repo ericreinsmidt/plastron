@@ -22,17 +22,13 @@ mark() { echo "$(cut -d' ' -f1 /proc/uptime) $1" >> /tmp/boot-times; }
 # it is mounted, as the Pixel's datapart does: Linux won't, and keeps the
 # flag for good once it has mounted a dirty volume, however cleanly it is
 # unmounted after. The flag is one bit of the boot sector, so a clean boot
-# pays for reading one byte: on exFAT bit 1 of VolumeFlags (byte 106), on
-# FAT32 bit 0 of byte 65.
+# pays for reading one byte: bit 1 of exFAT's VolumeFlags (byte 106).
 repair() {
-	case $2 in
-	exfat) state=$(od -An -tu1 -j106 -N1 $1); dirty=$(( state & 2 )) ;;
-	*) state=$(od -An -tu1 -j65 -N1 $1); dirty=$(( state & 1 )) ;;
-	esac
-	[ $dirty -eq 0 ] && return
+	state=$(od -An -tu1 -j106 -N1 $1)
+	[ $(( state & 2 )) -eq 0 ] && return
 	echo "brick: $1 was not unmounted cleanly; checking it" > /dev/kmsg
-	if [ $2 = exfat ]; then fsck.exfat -p $1; else fsck.fat -a $1; fi > /dev/null 2>&1
-	echo "brick: fsck.$2 finished with status $?" > /dev/kmsg
+	fsck.exfat -p $1 > /dev/null 2>&1
+	echo "brick: fsck.exfat finished with status $?" > /dev/kmsg
 }
 
 # A card partition's device, by its GPT name
@@ -170,7 +166,7 @@ start() {
 	games=$(part tortos)
 	[ -n "$games" ] || games=$(games_create)
 	if [ -n "$games" ]; then
-		repair $games exfat
+		repair $games
 		mount -t exfat -o noatime $games $SDCARD
 		[ -f /tmp/games-new ] && touch $SDCARD/.metadata_never_index
 		tortos_seed

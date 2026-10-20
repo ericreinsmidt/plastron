@@ -22,7 +22,6 @@
 /memreserve/	0x0000000040000000 0x0000000000040000;
 /memreserve/	0x0000000049e78000 0x000000000018796f;
 / {
-	serial-number = "54408000c335a81b";
 	model = "sun50iw10";
 	compatible = "allwinner,a133\0arm,sun50iw10p1";
 	interrupt-parent = <&wakeupgen>;
@@ -32,39 +31,16 @@
 	aliases {
 		serial0 = "/soc@03000000/uart@05000000\0/soc@03000000/uart@05000000";
 		serial1 = "/soc@03000000/uart@05000400\0/soc@03000000/uart@05000400";
-		serial2 = "/soc@03000000/uart@05000800\0/soc@03000000/uart@05000800";
-		serial3 = "/soc@03000000/uart@05000c00\0/soc@03000000/uart@05000c00";
-		serial4 = "/soc@03000000/uart@05001000\0/soc@03000000/uart@05001000";
-		serial5 = "/soc@03000000/uart@05001400\0/soc@03000000/uart@05001400";
-		serial6 = "/soc@03000000/uart@05001800\0/soc@03000000/uart@05001800";
-		serial7 = "/soc@03000000/uart@07080000\0/soc@03000000/uart@07080000";
-		ir0 = "/soc@03000000/s_cir@07040000\0/soc@03000000/s_cir@07040000";
-		ir1 = "/soc@03000000/ir@0x05071000\0/soc@03000000/ir@0x05071000";
 		twi0 = "/soc@03000000/twi@0x05002000\0/soc@03000000/twi@0x05002000";
-		twi1 = "/soc@03000000/twi@0x05002400\0/soc@03000000/twi@0x05002400";
 		twi2 = "/soc@03000000/twi@0x05002800\0/soc@03000000/twi@0x05002800";
-		twi3 = "/soc@03000000/twi@0x05002c00\0/soc@03000000/twi@0x05002c00";
-		twi4 = "/soc@03000000/twi@0x05003000\0/soc@03000000/twi@0x05003000";
-		twi5 = "/soc@03000000/twi@0x05003400\0/soc@03000000/twi@0x05003400";
 		twi6 = "/soc@03000000/s_twi@0x07081400\0/soc@03000000/s_twi@0x07081400";
-		twi7 = "/soc@03000000/s_twi@0x07081800\0/soc@03000000/s_twi@0x07081800";
-		spi0 = "/soc@03000000/spi@05010000\0/soc@03000000/spi@05010000";
-		spi1 = "/soc@03000000/spi@05011000\0/soc@03000000/spi@05011000";
-		spi2 = "/soc@03000000/spi@05012000\0/soc@03000000/spi@05012000";
 		ledc = "/soc@03000000/ledc@0x05018000\0/soc@03000000/ledc@0x05018000";
-		pcie = "/soc@03000000/pcie@0x05400000\0/soc@03000000/pcie@0x05400000";
 		gmac0 = "/soc@03000000/eth@05020000\0/soc@03000000/eth@05020000";
 		gmac1 = "/soc@03000000/eth@05030000\0/soc@03000000/eth@05030000";
 		global_timer0 = "/soc@03000000/timer@03009000\0/soc@03000000/timer@03009000";
 		mmc0 = "/soc@03000000/sdmmc@04020000\0/soc@03000000/sdmmc@04020000";
-		mmc2 = "/soc@03000000/sdmmc@04022000\0/soc@03000000/sdmmc@04022000";
-		nand0 = "/soc@03000000/nand0@04011000\0/soc@03000000/nand0@04011000";
 		disp = "/soc@03000000/disp@06000000\0/soc@03000000/disp@06000000";
-		eink = "/soc@03000000/eink@06400000\0/soc@03000000/eink@06400000";
-		tps65185 = "/soc@03000000/tps65185@68\0/soc@03000000/tps65185@68";
-		tps65185_slave = "/soc@03000000/tps65185_slave@68\0/soc@03000000/tps65185_slave@68";
 		lcd0 = "/soc@03000000/lcd0@01c0c000\0/soc@03000000/lcd0@01c0c000";
-		lcd1 = "/soc@03000000/lcd1@01c0c001\0/soc@03000000/lcd1@01c0c001";
 		pwm = "/soc@03000000/pwm@0300a000\0/soc@03000000/pwm@0300a000";
 		pwm0 = "/soc@03000000/pwm0@0300a000\0/soc@03000000/pwm0@0300a000";
 		pwm1 = "/soc@03000000/pwm1@0300a000\0/soc@03000000/pwm1@0300a000";
@@ -82,18 +58,12 @@
 		pwm13 = "/soc@03000000/pwm13@0300a000\0/soc@03000000/pwm13@0300a000";
 		pwm14 = "/soc@03000000/pwm14@0300a000\0/soc@03000000/pwm14@0300a000";
 		pwm15 = "/soc@03000000/pwm15@0300a000\0/soc@03000000/pwm15@0300a000";
-		ac200 = "/soc@03000000/ac200\0/soc@03000000/ac200";
-		boot_disp = "/soc@03000000/boot_disp\0/soc@03000000/boot_disp";
 		pmu0 = "/soc@03000000/s_twi@0x07081400/pmu@34\0/soc@03000000/s_twi@0x07081400/pmu@34";
 		standby_param = "/soc@03000000/standby_param\0/soc@03000000/standby_param";
 	};
 
 	chosen {
-		smbios3-entrypoint = <0x00 0x7bf47000>;
-		u-boot,version = "2026.10-g5124c9daeafe";
 		bootargs = "console=ttyS0,115200 loglevel=1 rdinit=/rdinit cma=64M";
-		linux,initrd-start = <0x00 0x49e78000>;
-		linux,initrd-end = <0x00 0x49fff96f>;
 	};
 
 	memory@40000000 {

@@ -25,7 +25,9 @@ if load mmc 0:1 ${kernel_comp_addr_r} Image.lz4 &&
 	fdt addr ${fdt_addr_r}
 	fdt resize 4096
 	fdt rsvmem add 0x40000000 0x40000
-	fdt set /soc@03000000/sdmmc@04022000 status disabled
+	# The Brick's own storage (the eMMC, sdc2 at 04022000) is never touched:
+	# brick.dtb has no node for it at all, so Linux never sees it. Keep it out
+	# of the device tree.
 	fdt set /chosen brick,pll-cpux "${pllcpux}"
 	# A new root waiting on the card (rootswitch applies it, then removes this
 	# marker): one look in this partition's folder

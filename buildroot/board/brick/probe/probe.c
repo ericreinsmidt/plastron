@@ -7,8 +7,8 @@
  * them, and shows them on the screen. Saved first, as a panel the driver
  * doesn't know may not show anything. The power button turns the Brick off.
  *
- * Nothing else runs: no root, no TortOS, no GPU libraries. The boot script
- * switches the eMMC controller off, so the Brick's own storage is never seen.
+ * Nothing else runs: no root, no TortOS, no GPU libraries. The device tree
+ * has no node for the eMMC, so the Brick's own storage is never seen.
  * Built static by scripts/build-brick-probe.sh, with the kernel's 8x16 font.
  */
 #include <dirent.h>

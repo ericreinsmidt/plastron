@@ -92,26 +92,13 @@ BR2_PACKAGE_FFMPEG_SWSCALE=y
 BR2_PACKAGE_TORTOS=y
 BR2_PACKAGE_DIATOM=y
 
-# sfdisk and partx, to add the root partition to a card from the Brick itself
+# sfdisk and partx, to add the games partition to a card on its first boot
 BR2_PACKAGE_UTIL_LINUX=y
 BR2_PACKAGE_UTIL_LINUX_BINARIES=y
 BR2_PACKAGE_UTIL_LINUX_PARTX=y
-# fsck.fat, for the card's SPIKE partition after a power-off that left it
-# dirty (/etc/init.d/brick)
-BR2_PACKAGE_DOSFSTOOLS=y
-BR2_PACKAGE_DOSFSTOOLS_FSCK_FAT=y
 # The games partition is exFAT, labeled TORTOS, as on the Pixel: mkfs.exfat
 # makes it, fsck.exfat repairs it after a power-off that left it dirty
 BR2_PACKAGE_EXFATPROGS=y
-
-# The root: ext4, in the card's partition named plastron-root, which the
-# initramfs (package/brick-rootswitch) mounts. Not
-# orphan_file, which mke2fs turns on and the 4.9 kernel can only mount
-# read-only.
-BR2_TARGET_ROOTFS_EXT2=y
-BR2_TARGET_ROOTFS_EXT2_4=y
-BR2_TARGET_ROOTFS_EXT2_SIZE="256M"
-BR2_TARGET_ROOTFS_EXT2_MKFS_OPTIONS="-O ^64bit,^orphan_file"
 
 # The boot files beside it (board/brick/post-image.sh): the initramfs, whose
 # one program is rootswitch, boot.scr made with mkimage, and the kernel,
@@ -123,6 +110,9 @@ BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_PX2_PATH)/board/brick/post-image.sh
 # the startup script, which copies TortOS onto the card
 BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_PX2_PATH)/board/brick/post-build.sh"
 BR2_PACKAGE_HOST_DOSFSTOOLS=y
+# mkfs.ext4 on the build host, for the card image's empty state partition
+# (board/brick/post-image.sh)
+BR2_PACKAGE_HOST_E2FSPROGS=y
 BR2_PACKAGE_HOST_GENIMAGE=y
 BR2_PACKAGE_HOST_MTOOLS=y
 BR2_TARGET_ROOTFS_SQUASHFS=y
