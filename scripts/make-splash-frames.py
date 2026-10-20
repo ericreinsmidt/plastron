@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
-Turns TortOS's boot animation into the frames the splash plays on the Pixel 2.
+Turns TortOS's boot animation, its flyby, into the frames the splash plays.
 
 Runs on the Mac, not in the build: it needs FFmpeg, and the result is small
 enough to keep in the repository (buildroot/package/splash/frames.bin), so
 the image build never has to decode video. Rerun it when the animation
 changes:
 
-    scripts/make-splash-frames.py [path/to/tortos-boot.mp4]
-    scripts/make-splash-frames.py --brick [path/to/tortos-boot.mp4]
+    scripts/make-splash-frames.py [path/to/tortos-fly.mp4]
+    scripts/make-splash-frames.py --brick [path/to/tortos-fly.mp4]
 
---brick makes the TrimUI Brick's (frames-brick.bin, for splash-fb.c): its
-panel is the video's own 1024x768 landscape, so the frames are only encoded.
-
---fly takes TortOS's flyby instead (res/boot/tortos-fly.mp4, from its
-tools/genboot.py --fly), at its 60 fps: the wordmark from the first frame and
-the turtle shooting across above it with his speed bars, for fast boots.
+The flyby is TortOS's res/boot/tortos-fly.mp4, from its tools/genboot.py, at
+60 fps: the wordmark from the first frame and the turtle shooting across above
+it with his speed bars. Without --brick the frames are the Pixel 2's
+(frames.bin, for splash.c); --brick makes the TrimUI Brick's (frames-brick.bin,
+for splash-fb.c): its panel is the video's own 1024x768 landscape, so the
+frames are only encoded.
 
 The input may also be the folder of PNG frames genboot.py leaves in TortOS's
 build/boot-frames: lossless, so the flat ground stays one run where the
@@ -48,19 +48,17 @@ import sys
 import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_VIDEO = os.path.expanduser("~/Developer/TortOS/res/boot/tortos-boot.mp4")
-FLY_VIDEO = os.path.expanduser("~/Developer/TortOS/res/boot/tortos-fly.mp4")
+DEFAULT_VIDEO = os.path.expanduser("~/Developer/TortOS/res/boot/tortos-fly.mp4")
 PACKAGE = os.path.join(HERE, "..", "buildroot", "package", "splash")
-FPS, FLY_FPS = 30, 60
+FPS = 60
 
 
 def main():
     args = sys.argv[1:]
     brick = "--brick" in args
-    fly = "--fly" in args
-    args = [a for a in args if a not in ("--brick", "--fly")]
-    video = args[0] if args else (FLY_VIDEO if fly else DEFAULT_VIDEO)
-    fps = FLY_FPS if fly else FPS
+    args = [a for a in args if a != "--brick"]
+    video = args[0] if args else DEFAULT_VIDEO
+    fps = FPS
     if brick:
         W, H, OUT = 1024, 768, os.path.join(PACKAGE, "frames-brick.bin")
         vf = "fps=%d" % fps
@@ -82,8 +80,8 @@ def main():
     # Up to the first frame that is already the finished logo, then the last
     # frame itself. "Already" within a tolerance: the held frames differ by
     # the video's compression noise, at most 10 of 255 from frame 46 of
-    # tortos-boot.mp4 on (measured 2026-10-01), where the logo still settling
-    # is off by up to 120.
+    # TortOS's earlier boot animation on (measured 2026-10-01), where the logo
+    # still settling was off by up to 120.
     last = frames[-1]
     keep = len(frames) - 1
     while keep > 1 and max(abs(a - b) for a, b in zip(frames[keep - 1], last)) <= 12:

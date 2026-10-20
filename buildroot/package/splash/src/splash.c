@@ -3,10 +3,11 @@
  * splash: TortOS's boot animation on the Pixel 2, from the moment the panel
  * lights until TortOS is ready.
  *
- * The frames are TortOS's own boot video (res/boot/tortos-boot.mp4: the
- * turtle walks across, dashes off, and leaves the logo), turned onto the
- * portrait panel and run-length encoded ahead of time by
- * scripts/make-splash-frames.py, so nothing is decoded here but the runs.
+ * The frames are TortOS's own boot video (res/boot/tortos-fly.mp4: the
+ * wordmark from the first frame, and the turtle shooting across above it with
+ * his speed bars), turned onto the portrait panel and run-length encoded
+ * ahead of time by scripts/make-splash-frames.py, so nothing is decoded here
+ * but the runs.
  *
  * It plays at the video's own rate and never holds anything up: TortOS starts
  * alongside it, and when TortOS has its first frame ready it sends SIGUSR1.

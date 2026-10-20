@@ -4,3 +4,6 @@
 /local/
 # Finder
 .DS_Store
+
+# Retired things kept for reference, out of the repository
+/attic/

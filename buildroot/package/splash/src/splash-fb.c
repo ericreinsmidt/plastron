@@ -9,7 +9,7 @@
  * 1024x768, and only the band of rows that changed from the frame before is
  * stored, zlib-compressed, so a frame is unpacked into the last one and only
  * that band copied to the screen. On the Brick that is TortOS's flyby (its
- * tools/genboot.py --fly): the wordmark from the first frame, and the turtle
+ * tools/genboot.py): the wordmark from the first frame, and the turtle
  * shooting across above it with his speed bars, cut wherever TortOS is ready.
  *
  * It draws into the framebuffer's last page and shows it with a pan. TortOS,
