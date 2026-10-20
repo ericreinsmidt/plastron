@@ -66,10 +66,10 @@ endef
 # when it is given one (it was never passed before 2026-10-06).
 TORTOS_CARD = $(TARGET_DIR)/usr/share/tortos/card
 ifeq ($(TORTOS_DEVICE),brick)
-# The Brick's own system: TortOS's payload for it (NATIVE=1, without what
-# only TrimUI's firmware uses), which /etc/init.d/brick copies onto the card
+# The Brick's: TortOS's payload for it, which /etc/init.d/brick copies onto
+# the card
 define TORTOS_INSTALL_TARGET_CMDS
-	DEVICE=brick NATIVE=1 OUT=$(TORTOS_CARD) ZIP= VERSION="$(TORTOS_VERSION_NUMBER)" \
+	DEVICE=brick OUT=$(TORTOS_CARD) ZIP= VERSION="$(TORTOS_VERSION_NUMBER)" \
 		TORTOS_ELF=$(@D)/$(TORTOS_BUILD_DIR)/tortos.elf \
 		MUSE_ELF=$(@D)/$(TORTOS_BUILD_DIR)/muse \
 		DIATOM_ELF=$(DIATOM_DIR)/build/brick/diatom \
