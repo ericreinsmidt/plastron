@@ -23,11 +23,11 @@ TORTOS_OVERRIDE_SRCDIR_RSYNC_EXCLUSIONS = \
 	--filter=:-_.gitignore --exclude=/.claude --exclude=/AUDIOBOOKS
 
 # TortOS's own cross build (mk/cross.mk), pointed at this system's compiler
-# and libraries instead of the Brick's, with the Pixel 2's device file
-# (src/device/pixel2.c). The generated ScreenScraper header first, on its own:
-# the elf needs it and has no rule to make it.
+# and libraries, with the device's own file (src/device/, picked below). The
+# generated ScreenScraper header first, on its own: the elf needs it and has
+# no rule to make it.
 #
-# Into build-pixel2/, never build/: the source used to be copied in whole,
+# Into build-<device>/, never build/: the source used to be copied in whole,
 # ignored files and all, so a Brick build sitting in the worktree's build/
 # came along and make took its muse as up to date. The Brick's binary shipped
 # as the Pixel's, caught 2026-10-01 by its size. The copy leaves build/ behind
@@ -42,9 +42,8 @@ TORTOS_DEVICE = $(if $(BR2_PACKAGE_PVR_GE8300),brick,pixel2)
 # in the shell so neither value is written into a command line make prints.
 TORTOS_SS_ENV = /tortos-ss.env
 #
-# The version is TortOS's own, from its Makefile, which hands it to
-# mk/cross.mk on the Brick: cross.mk alone says 0.0, and the Pixel's About
-# page did until 2026-10-03.
+# The version is TortOS's own, from its Makefile's VERSION line: cross.mk
+# alone says 0.0, and the Pixel's About page did until 2026-10-03.
 TORTOS_VERSION_NUMBER = $$(sed -n 's/^VERSION ?= //p' $(@D)/Makefile)
 define TORTOS_BUILD_CMDS
 	SS_DEVID="$$(sed -n 's/^SS_DEVID=//p' $(TORTOS_SS_ENV) 2>/dev/null | head -1)" \
