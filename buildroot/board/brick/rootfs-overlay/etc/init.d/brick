@@ -40,18 +40,21 @@ part() {
 
 # The card image holds the boot, root and state partitions; on its first boot
 # the rest of the card becomes the games partition, as the Pixel 2's datapart
-# does: right after the image's last partition (the state one, or the root on
-# an older image), on a 4 MiB boundary (the card's erase blocks), exFAT,
-# labeled TORTOS, named tortos in the GPT, numbered after the others. 32 KB
-# clusters: Linux reads a folder a whole cluster at a time, and mkfs.exfat's
-# own choice, 128 KB on a 64 GB card, made every folder TortOS reads at boot
-# cost 128 KB of card. The image's backup GPT sits at the end of the image,
-# not the card, so it moves to the card's end first.
+# does: right after the image's last partition (the state one), on a 4 MiB
+# boundary (the card's erase blocks), exFAT, labeled TORTOS, named tortos in
+# the GPT, numbered after the others. 32 KB clusters: Linux reads a folder a
+# whole cluster at a time, and mkfs.exfat's own choice, 128 KB on a 64 GB card,
+# made every folder TortOS reads at boot cost 128 KB of card. The image's
+# backup GPT sits at the end of the image, not the card, so it moves to the
+# card's end first.
 games_create() {
 	card=/dev/mmcblk0
 	echo "brick: first boot, adding the games partition" > /dev/kmsg
 	last=$(part plastron-state)
-	[ -n "$last" ] || last=$(part plastron-root)
+	[ -n "$last" ] || {
+		echo "brick: no state partition, so no games partition" > /dev/kmsg
+		return
+	}
 	last=/sys/class/block/${last##*/}
 	start=$(( $(cat $last/start) + $(cat $last/size) ))
 	start=$(( (start + 8191) / 8192 * 8192 ))

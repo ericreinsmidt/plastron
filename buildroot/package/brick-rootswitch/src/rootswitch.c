@@ -2,9 +2,9 @@
  *
  * The boot script (board/brick/boot.cmd) loads brick/boot/initramfs.cpio.gz
  * and runs /rdinit; this is that /rdinit. It finds the card's GPT partition
- * named plastron-root, mounts it (squashfs, read-only, or ext4) and hands
- * over to its /sbin/init, which runs plastron's Brick system from there. No
- * shell and no BusyBox: built static (package/brick-rootswitch), packed by
+ * named plastron-root, mounts it (squashfs, read-only) and hands over to its
+ * /sbin/init, which runs plastron's Brick system from there. No shell and no
+ * BusyBox: built static (package/brick-rootswitch), packed by
  * board/brick/post-image.sh.
  *
  * A new root comes the same way: put on the games partition as
@@ -235,10 +235,8 @@ int main(void)
 		root_update(device);
 	umount("/sys");
 	/* squashfs, read-only: half the bytes to read, the boot's files packed
-	 * together at its front (board/brick/squashfs-sort.txt). ext4, writable,
-	 * where the root is that instead */
-	if (mount(device, "/root", "squashfs", MS_RDONLY, NULL) != 0 &&
-	    mount(device, "/root", "ext4", MS_NOATIME, NULL) != 0) {
+	 * together at its front (board/brick/squashfs-sort.txt) */
+	if (mount(device, "/root", "squashfs", MS_RDONLY, NULL) != 0) {
 		say("can't mount the root partition");
 		for (;;)
 			pause();
