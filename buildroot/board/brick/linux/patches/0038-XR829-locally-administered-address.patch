@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] The XR829's Wi-Fi driver takes a locally administered address
+ as its macaddr= parameter: it turned down any address with that bit set,
+ which is the right kind for one the system makes up, so plastron can give
+ each Brick one fixed address at load. The chip is given its address only
+ then: one set on the interface later reaches the frames but not the chip,
+ which went on listening for its old address and never heard the router
+
+---
+--- a/drivers/net/wireless/xr829/wlan/main.c
++++ b/drivers/net/wireless/xr829/wlan/main.c
+@@ -457,11 +457,14 @@
+ 
+ /*bit0: 1=multicast, 0=unicast*/
+ /*bit1: 1=locally, 0=universally(vendor use)*/
++/* Unicast is all a station's address needs: a locally administered one is
++ * the right kind for an address the system makes up, as plastron does for
++ * the Brick from its chip's serial, and passes as macaddr= */
+ #define MACADDR_VAILID(a) ( \
+ (a[0] != 0 || a[1] != 0 ||  \
+  a[2] != 0 || a[3] != 0 ||  \
+  a[4] != 0 || a[5] != 0) && \
+- !(a[0] & 0x3))
++ !(a[0] & 0x1))
+ 
+ static void xradio_get_mac_addrs(u8 *macaddr)
+ {

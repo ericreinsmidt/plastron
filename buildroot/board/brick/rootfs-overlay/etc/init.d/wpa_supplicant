@@ -14,9 +14,28 @@ M=/usr/lib/brick
 CONF=${USERDATA_PATH:-/mnt/SDCARD/.userdata/brick}/wifi/wpa_supplicant.conf
 PID=/var/run/wpa_supplicant.pid
 
+# One address per Brick, the same on every boot, through system updates and a
+# rewritten card. The XR829 driver otherwise makes up a new one each time it
+# loads (it would keep it in /etc/wifi/xr_wifi.conf, on the read-only root),
+# so the router saw a new device and gave it a new lease at every boot. From
+# a hash of the chip's serial, which can't be read back from it; locally
+# administered and unicast. Given to the driver as it loads (macaddr=, kernel
+# patch 0038): it gives the chip its address only then, and one set on the
+# interface later reached the frames but not the chip, which went on
+# listening for its old address and never heard the router
+wifi_mac() {
+	serial=$(sed -n 's/^sunxi_serial *: *//p' /sys/class/sunxi_info/sys_info 2> /dev/null)
+	[ -n "$serial" ] || return 1
+	hash=$(echo "plastron wlan0 $serial" | md5sum | cut -c1-12)
+	first=$(( (0x$(echo $hash | cut -c1-2) & 0xfc) | 0x02 ))
+	printf '%02x%s\n' $first "$(echo $hash | cut -c3-12 | sed 's/../:&/g')"
+}
+
 start() {
 	for m in cfg80211 xr829_mac xr829_core xr829_wlan; do
-		grep -q "^$m " /proc/modules || insmod $M/$m.ko || return 1
+		arg=
+		[ $m = xr829_core ] && mac=$(wifi_mac) && arg="macaddr=$mac"
+		grep -q "^$m " /proc/modules || insmod $M/$m.ko $arg || return 1
 	done
 	for i in $(seq 1 50); do
 		[ -d /sys/class/net/wlan0 ] && break
