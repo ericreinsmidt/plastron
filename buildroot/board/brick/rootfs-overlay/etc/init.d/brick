@@ -41,6 +41,15 @@ start() {
 		echo performance > $G
 		for i in $(seq 1 400); do [ -n "$splash" ] && [ -d /proc/$splash ] || break; sleep 0.05; done
 		echo ondemand > $G
+		# Rechecked every 50 ms rather than every 2 s, the kernel's own
+		# setting, and raised at 80% busy rather than 95: a game started
+		# from the shelf, or resumed from TortOS's menu, ran up to 2 s at
+		# 408-600 MHz before the next check, its frames 20-60 ms late and its
+		# sound running dry - heard as a sluggish start and a stutter after
+		# the menu (measured 2026-10-21, a Diatom logging its first 3 s)
+		O=/sys/devices/system/cpu/cpufreq/ondemand
+		echo 50000 > $O/sampling_rate
+		echo 80 > $O/up_threshold
 		mark "governor: ondemand"
 	) &
 
