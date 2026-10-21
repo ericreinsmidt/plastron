@@ -16,7 +16,7 @@
  * first, the logo simply stays.
  *
  * Logs "splash: panel lit at ... s", which is how the boot's first picture is
- * timed (docs/boot-time.md), and where it stopped.
+ * timed, and where it stopped.
  */
 #include <errno.h>
 #include <fcntl.h>
