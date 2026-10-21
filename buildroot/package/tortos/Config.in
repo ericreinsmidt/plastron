@@ -3,6 +3,9 @@ config BR2_PACKAGE_TORTOS
 	depends on BR2_PACKAGE_SDL2_IMAGE
 	depends on BR2_PACKAGE_SDL2_TTF
 	depends on BR2_PACKAGE_FFMPEG
+	select BR2_PACKAGE_SQLITE
+	select BR2_PACKAGE_ALSA_LIB
+	select BR2_PACKAGE_ZLIB
 	help
 	  The TortOS launcher (tortos) and its music engine (muse),
 	  built from the TortOS repository, mounted at /tortos in the

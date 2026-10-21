@@ -10,9 +10,9 @@ DIATOM_SITE_METHOD = local
 # The Brick's system is the one with the Brick's GPU libraries
 DIATOM_PORT = $(if $(BR2_PACKAGE_PVR_GE8300),brick,pixel2)
 ifeq ($(DIATOM_PORT),brick)
-DIATOM_DEPENDENCIES = sdl2 host-pkgconf
+DIATOM_DEPENDENCIES = sdl2 zlib host-pkgconf
 else
-DIATOM_DEPENDENCIES = sdl2 mesa3d-px2 libdrm host-pkgconf
+DIATOM_DEPENDENCIES = sdl2 zlib mesa3d-px2 libdrm host-pkgconf
 endif
 DIATOM_LICENSE = MIT
 DIATOM_LICENSE_FILES = LICENSE

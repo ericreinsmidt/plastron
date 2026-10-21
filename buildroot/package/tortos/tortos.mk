@@ -8,7 +8,7 @@ TORTOS_VERSION = local
 TORTOS_SITE = /tortos
 TORTOS_SITE_METHOD = local
 # diatom too: its binary goes on the card with TortOS's (see the install)
-TORTOS_DEPENDENCIES = sdl2 sdl2_image sdl2_ttf ffmpeg diatom
+TORTOS_DEPENDENCIES = sdl2 sdl2_image sdl2_ttf ffmpeg sqlite alsa-lib zlib diatom
 TORTOS_LICENSE = MIT
 TORTOS_LICENSE_FILES = LICENSE THIRD-PARTY-LICENSES.md
 # Its source is public (github.com/ericreinsmidt/TortOS), so legal-info names
