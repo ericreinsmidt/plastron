@@ -26,7 +26,7 @@ DIATOM_OVERRIDE_SRCDIR_RSYNC_EXCLUSIONS = --filter=:-_.gitignore --exclude=/.cla
 # Diatom's port for the device (port/brick.c or port/pixel2.c). Its build
 # finds the libraries with pkg-config, which in Buildroot's PATH answers for
 # this system's: SDL2 on the Brick; SDL2, EGL, GLES, GBM and libdrm on the
-# Pixel 2 (its ADR-0035).
+# Pixel 2.
 define DIATOM_BUILD_CMDS
 	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) PORT=$(DIATOM_PORT) CC="$(TARGET_CC)"
 endef
