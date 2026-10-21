@@ -65,7 +65,7 @@ endef
 # when it is given one (it was never passed before 2026-10-06).
 TORTOS_CARD = $(TARGET_DIR)/usr/share/tortos/card
 ifeq ($(TORTOS_DEVICE),brick)
-# The Brick's: TortOS's payload for it, which /etc/init.d/brick copies onto
+# The Brick's: TortOS's payload for it, which /etc/init.d/tortos copies onto
 # the card
 define TORTOS_INSTALL_TARGET_CMDS
 	DEVICE=brick OUT=$(TORTOS_CARD) ZIP= VERSION="$(TORTOS_VERSION_NUMBER)" \
@@ -85,5 +85,12 @@ define TORTOS_INSTALL_TARGET_CMDS
 		sh $(@D)/mk/payload.sh
 endef
 endif
+
+# Its start and stop, the same on both devices: copied onto the card from the
+# image when the card has no TortOS or an older one, launch.sh run, and at
+# shutdown TortOS stopped ahead of everything else (tortos.init)
+define TORTOS_INSTALL_INIT_SYSV
+	$(INSTALL) -D -m 0755 $(TORTOS_PKGDIR)/tortos.init $(TARGET_DIR)/etc/init.d/tortos
+endef
 
 $(eval $(generic-package))

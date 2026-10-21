@@ -37,6 +37,7 @@ null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 # then replayed the ext4 journal, 400 ms of mounting root. Diatom saves the
 # running game on SIGTERM. The card's partition is unmounted on its own,
 # waiting for the programs that run from it to go (see datapart).
+::shutdown:/etc/init.d/tortos stop
 ::shutdown:/etc/init.d/rcK
 ::shutdown:/bin/kill -TERM -1
 ::shutdown:/bin/usleep 200000

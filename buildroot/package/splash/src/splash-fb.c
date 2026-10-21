@@ -31,7 +31,7 @@
  * the same way, putting back EGL's pan if that comes later, until TortOS
  * draws, or 15 s.
  *
- * Started first thing by /etc/init.d/brick; the framebuffer is there long
+ * Started first thing, by inittab's first line; the framebuffer is there long
  * before the panel lights, so the first frame is waiting when it does.
  */
 #include <fcntl.h>

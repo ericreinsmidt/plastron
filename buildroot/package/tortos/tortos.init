@@ -1,9 +1,9 @@
 #!/bin/sh
-# TortOS, from the card's games partition. TortOS's own files live there, as
-# on the Brick, so it is updated by copying files onto the card.
+# TortOS, from the card's games partition, on both devices. TortOS's own files
+# live there, so it is updated by copying files onto the card.
 #
-# Started by init right after datapart has mounted the card, ahead of rcS, and
-# in the background: init waits for each sysinit line, and the rest of the
+# Started by init right after datapart has mounted the card, and in the
+# background: init waits for each sysinit line, and the rest of the
 # boot has nothing TortOS needs, so it carries on beside it.
 #
 # A card with no TortOS on it gets the copy this image carries first: on the
@@ -15,12 +15,14 @@
 # copied onto the card by hand stays until an image newer than it comes.
 #
 # TortOS handles the power button itself (it saves a running game first), so
-# powerkey only runs when there is no TortOS on the card to do it.
+# the Pixel 2's powerkey only runs when there is no TortOS on the card to do
+# it. The Brick's power key is the kernel's, and needs nothing.
 CARD=/mnt/SDCARD
 LAUNCH=$CARD/TortOS/launch.sh
+PID=/tmp/tortos-loop.pid
 SEED=/usr/share/tortos/card
 # The image's TortOS version as version_of gives it (below), written in by the
-# build (board/px2/post-build.sh) so a boot never reads the image's VERSION
+# build (each board's post-build.sh) so a boot never reads the image's VERSION
 # file: that read cost 5 to 8 ms, the card's 1 ms, as the card's folder has
 # just been read for launch.sh (measured 2026-10-06). Empty in an image built
 # without a version, which then never copies over a card's TortOS.
@@ -82,12 +84,24 @@ start() {
 	fi
 	if [ -f "$LAUNCH" ]; then
 		sh "$LAUNCH" < /dev/null > /dev/null 2>&1 &
+		echo $! > $PID
 	else
 		echo "tortos: no $LAUNCH; the splash stays and power works" > /dev/kmsg
-		/usr/sbin/powerkey < /dev/null > /dev/null 2>&1 &
+		[ -x /usr/sbin/powerkey ] &&
+			/usr/sbin/powerkey < /dev/null > /dev/null 2>&1 &
 	fi
+}
+
+# At shutdown, ahead of init's TERM to everything: launch.sh first, or it
+# starts TortOS again the moment TortOS goes, then TortOS, Muse and Diatom,
+# waiting up to 2 s for Diatom, which saves a running game on its TERM
+stop() {
+	[ -f $PID ] && kill $(cat $PID) 2>/dev/null
+	killall -TERM tortos.elf muse diatom 2>/dev/null
+	for i in $(seq 1 20); do pidof diatom > /dev/null || break; sleep 0.1; done
 }
 
 case "$1" in
 start) start ;;
+stop) stop ;;
 esac

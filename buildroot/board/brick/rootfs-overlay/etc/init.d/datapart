@@ -1,0 +1,99 @@
+#!/bin/sh
+# The card's games partition, as the Pixel 2's datapart does it: exFAT,
+# labeled TORTOS, mounted at /mnt/SDCARD for TortOS, games, music and saves.
+# Made over the rest of the card on a freshly written card's first boot,
+# checked when it wasn't unmounted cleanly, and unmounted at shutdown once
+# nothing is using it. Each step's time since the kernel started goes to
+# /tmp/boot-times.
+
+SDCARD=/mnt/SDCARD
+
+mark() { echo "$(cut -d' ' -f1 /proc/uptime) $1" >> /tmp/boot-times; }
+
+# A card partition that wasn't unmounted cleanly is checked and repaired before
+# it is mounted, as the Pixel's datapart does: Linux won't, and keeps the
+# flag for good once it has mounted a dirty volume, however cleanly it is
+# unmounted after. The flag is one bit of the boot sector, so a clean boot
+# pays for reading one byte: bit 1 of exFAT's VolumeFlags (byte 106).
+repair() {
+	state=$(od -An -tu1 -j106 -N1 $1)
+	[ $(( state & 2 )) -eq 0 ] && return
+	echo "datapart: $1 was not unmounted cleanly; checking it" > /dev/kmsg
+	fsck.exfat -p $1 > /dev/null 2>&1
+	echo "datapart: fsck.exfat finished with status $?" > /dev/kmsg
+}
+
+# A card partition's device, by its GPT name
+part() {
+	for p in /sys/class/block/mmcblk0p*; do
+		grep -q "^PARTNAME=$1$" $p/uevent 2>/dev/null && echo /dev/${p##*/}
+	done
+}
+
+# The card image holds the boot, root and state partitions; on its first boot
+# the rest of the card becomes the games partition, as the Pixel 2's datapart
+# does: right after the image's last partition (the state one), on a 4 MiB
+# boundary (the card's erase blocks), exFAT, labeled TORTOS, named tortos in
+# the GPT, numbered after the others. 32 KB clusters: Linux reads a folder a
+# whole cluster at a time, and mkfs.exfat's own choice, 128 KB on a 64 GB card,
+# made every folder TortOS reads at boot cost 128 KB of card. The image's
+# backup GPT sits at the end of the image, not the card, so it moves to the
+# card's end first.
+games_create() {
+	card=/dev/mmcblk0
+	echo "datapart: first boot, adding the games partition" > /dev/kmsg
+	last=$(part plastron-state)
+	[ -n "$last" ] || {
+		echo "datapart: no state partition, so no games partition" > /dev/kmsg
+		return
+	}
+	last=/sys/class/block/${last##*/}
+	start=$(( $(cat $last/start) + $(cat $last/size) ))
+	start=$(( (start + 8191) / 8192 * 8192 ))
+	nr=$(( $(cat $last/partition) + 1 ))
+	sfdisk --quiet --relocate gpt-bak-std $card &&
+	echo "start=$start, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, name=tortos" |
+		sfdisk --quiet --append --no-reread $card &&
+	partx --add --nr $nr $card &&
+	mkfs.exfat -c 32K -L TORTOS ${card}p$nr > /dev/null || {
+		echo "datapart: couldn't add the games partition" > /dev/kmsg
+		return
+	}
+	: > /tmp/games-new
+	echo "datapart: ${card}p$nr formatted as exFAT, label TORTOS" > /dev/kmsg
+	echo ${card}p$nr
+}
+
+start() {
+	mkdir -p $SDCARD
+	games=$(part tortos)
+	[ -n "$games" ] || games=$(games_create)
+	if [ -n "$games" ]; then
+		repair $games
+		mount -t exfat -o noatime $games $SDCARD
+		[ -f /tmp/games-new ] && touch $SDCARD/.metadata_never_index
+	fi
+	mark card
+}
+
+# The card, waiting for the programs that ran from it to go, as the Pixel's
+# datapart does: unmounted at once, it was often still busy, and every next
+# boot found it marked as not properly unmounted
+stop() {
+	grep -q " $SDCARD " /proc/mounts || return 0
+	n=0
+	until umount $SDCARD 2>/dev/null; do
+		n=$((n + 1))
+		if [ $n -ge 60 ]; then
+			echo "datapart: $SDCARD still in use after 3 s, left for the next boot to check" > /dev/kmsg
+			return 1
+		fi
+		usleep 50000
+	done
+}
+
+case "$1" in
+start) start ;;
+stop) stop ;;
+*) echo "usage: $0 start|stop" >&2; exit 1 ;;
+esac

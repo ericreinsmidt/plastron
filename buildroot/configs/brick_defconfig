@@ -37,7 +37,7 @@ BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_PX2_PATH)/board/brick/
 # through them (the pvrfb video driver, see external.mk)
 BR2_PACKAGE_PVR_GE8300=y
 # TortOS's boot animation from the moment the framebuffer exists until
-# TortOS's first frame (splash-fb.c, started by /etc/init.d/brick)
+# TortOS's first frame (splash-fb.c, inittab's first line, /etc/init.d/splash)
 BR2_PACKAGE_SPLASH=y
 # The kernel modules (the GPU's, the gamepad's) and the two startup tools, in
 # /usr/lib/brick, where /etc/init.d/brick loads and runs them

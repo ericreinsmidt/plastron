@@ -36,12 +36,9 @@ define SPLASH_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0644 $(SPLASH_PKGDIR)/$(SPLASH_FRAMES) $(TARGET_DIR)/usr/share/splash/frames.bin
 endef
 
-# The Pixel's inittab starts it through this; the Brick's /etc/init.d/brick
-# starts it itself
-ifneq ($(BR2_PACKAGE_PVR_GE8300),y)
+# Both devices' inittabs start it through this, as their first line
 define SPLASH_INSTALL_INIT_SYSV
 	$(INSTALL) -D -m 0755 $(SPLASH_PKGDIR)/splash.init $(TARGET_DIR)/etc/init.d/splash
 endef
-endif
 
 $(eval $(generic-package))

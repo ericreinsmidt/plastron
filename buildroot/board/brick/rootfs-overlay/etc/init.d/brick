@@ -1,116 +1,15 @@
 #!/bin/sh
-# The Brick's start, from inittab's sysinit, after the mounts: the card, the
-# GPU, the pad, TortOS (the card's launch.sh, as on the Pixel 2), and the USB
-# cable's network for bring-up.
-# What the bring-up's rdinit did, less what an initramfs needed: the
-# libraries are in /usr/lib with real links, the GPU's
-# firmware and powervr.ini come with pvr-ge8300, the ALSA configuration with
-# the root. Each step's time since the kernel started goes to /tmp/boot-times.
-#
-# The card's games partition, exFAT and labeled TORTOS as on the Pixel 2, is
-# /mnt/SDCARD: TortOS, games, music, saves; a freshly written card gets it
-# and TortOS on its first boot. The kernel
-# modules and the two bring-up tools are in the root (/usr/lib/brick), so the
-# partition the boot loader reads its files from isn't mounted at all.
+# The Brick's hardware, from inittab's sysinit after the splash and the mounts,
+# before the card and TortOS (datapart, tortos): what the Pixel 2's kernel and
+# its daemons bring up on their own. The card's read-ahead, the RCU pace, the
+# watchdog, the CPU governor for the boot, the GPU's modules, the pad's, and
+# the mute switch's pin. The kernel modules and the system's own tools are in
+# the root (/usr/lib/brick). Each step's time since the kernel started goes to
+# /tmp/boot-times.
 
-SDCARD=/mnt/SDCARD
 L=/usr/lib/brick
 
 mark() { echo "$(cut -d' ' -f1 /proc/uptime) $1" >> /tmp/boot-times; }
-
-# A card partition that wasn't unmounted cleanly is checked and repaired before
-# it is mounted, as the Pixel's datapart does: Linux won't, and keeps the
-# flag for good once it has mounted a dirty volume, however cleanly it is
-# unmounted after. The flag is one bit of the boot sector, so a clean boot
-# pays for reading one byte: bit 1 of exFAT's VolumeFlags (byte 106).
-repair() {
-	state=$(od -An -tu1 -j106 -N1 $1)
-	[ $(( state & 2 )) -eq 0 ] && return
-	echo "brick: $1 was not unmounted cleanly; checking it" > /dev/kmsg
-	fsck.exfat -p $1 > /dev/null 2>&1
-	echo "brick: fsck.exfat finished with status $?" > /dev/kmsg
-}
-
-# A card partition's device, by its GPT name
-part() {
-	for p in /sys/class/block/mmcblk0p*; do
-		grep -q "^PARTNAME=$1$" $p/uevent 2>/dev/null && echo /dev/${p##*/}
-	done
-}
-
-# The card image holds the boot, root and state partitions; on its first boot
-# the rest of the card becomes the games partition, as the Pixel 2's datapart
-# does: right after the image's last partition (the state one), on a 4 MiB
-# boundary (the card's erase blocks), exFAT, labeled TORTOS, named tortos in
-# the GPT, numbered after the others. 32 KB clusters: Linux reads a folder a
-# whole cluster at a time, and mkfs.exfat's own choice, 128 KB on a 64 GB card,
-# made every folder TortOS reads at boot cost 128 KB of card. The image's
-# backup GPT sits at the end of the image, not the card, so it moves to the
-# card's end first.
-games_create() {
-	card=/dev/mmcblk0
-	echo "brick: first boot, adding the games partition" > /dev/kmsg
-	last=$(part plastron-state)
-	[ -n "$last" ] || {
-		echo "brick: no state partition, so no games partition" > /dev/kmsg
-		return
-	}
-	last=/sys/class/block/${last##*/}
-	start=$(( $(cat $last/start) + $(cat $last/size) ))
-	start=$(( (start + 8191) / 8192 * 8192 ))
-	nr=$(( $(cat $last/partition) + 1 ))
-	sfdisk --quiet --relocate gpt-bak-std $card &&
-	echo "start=$start, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, name=tortos" |
-		sfdisk --quiet --append --no-reread $card &&
-	partx --add --nr $nr $card &&
-	mkfs.exfat -c 32K -L TORTOS ${card}p$nr > /dev/null || {
-		echo "brick: couldn't add the games partition" > /dev/kmsg
-		return
-	}
-	: > /tmp/games-new
-	echo "brick: ${card}p$nr formatted as exFAT, label TORTOS" > /dev/kmsg
-	echo ${card}p$nr
-}
-
-# TortOS onto the card from the image (/usr/share/tortos/card): on the first
-# boot, whenever it goes missing, and when the image's is newer, never an older
-# one over a newer, as the Pixel 2's /etc/init.d/tortos does. Only adds: the
-# player's games, saves and TortOS's own state stay. launch.sh goes last,
-# after a sync, so a copy cut short starts over at the next boot. SEED_V is
-# the image's version, written in by board/brick/post-build.sh.
-SEED=/usr/share/tortos/card
-LAUNCH=$SDCARD/TortOS/launch.sh
-SEED_V=
-version_of() {
-	v=
-	[ -f "$1" ] || return 1
-	IFS=. read -r a b c < "$1"
-	case "$a.$b.${c:-0}" in
-	*[!0-9.]* | .* | *..*) return 1 ;;
-	esac
-	v=$((a * 1000000 + b * 1000 + ${c:-0}))
-}
-tortos_seed() {
-	[ -f $SEED/TortOS/launch.sh ] || return
-	if [ -f $LAUNCH ]; then
-		[ -n "$SEED_V" ] || return
-		version_of $SDCARD/TortOS/VERSION && [ "$SEED_V" -le "$v" ] && return
-		echo "brick: the image carries a newer TortOS than the card; copying it" > /dev/kmsg
-		rm -f $LAUNCH
-	else
-		echo "brick: no TortOS on the card; copying it from the image" > /dev/kmsg
-	fi
-	mkdir -p $SDCARD/TortOS
-	for f in $SEED/TortOS/* $SEED/TortOS/.[!.]*; do
-		[ -e "$f" ] && [ "${f##*/}" != launch.sh ] && cp -R "$f" $SDCARD/TortOS/
-	done
-	for d in $SEED/*; do
-		[ "${d##*/}" != TortOS ] && cp -R "$d" $SDCARD/
-	done
-	sync
-	cp $SEED/TortOS/launch.sh $LAUNCH && sync
-	echo "brick: TortOS copied onto the card" > /dev/kmsg
-}
 
 start() {
 	# The card read ahead 2 MB at a time rather than 128 KB, first, before
@@ -126,10 +25,6 @@ start() {
 	# four in turn, 186 ms of TortOS's start where it is 17 ms expedited
 	# (measured 2026-10-12). Diatom does the same at every game.
 	echo 1 > /sys/kernel/rcu_expedited
-	# TortOS's boot animation, first: it draws from the moment the
-	# framebuffer exists and steps aside when TortOS draws (splash-fb.c)
-	splash &
-	splash=$!
 	watchdog -t 4 /dev/watchdog 2>/dev/null
 	mark init
 
@@ -137,21 +32,23 @@ start() {
 	# drawn its first frame, then ondemand, which otherwise starts at 408 MHz
 	# and is still ramping up while TortOS starts. The splash ends at that
 	# first frame, so its going is the sign; it gives up by itself if TortOS
-	# never draws, after 15 s, and 20 s here is the bound past that
+	# never draws, after 15 s, and 20 s here is the bound past that. The
+	# splash is inittab's first line (/etc/init.d/splash), so it is running
 	G=/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+	splash=$(pidof splash)
 	(
 		for i in $(seq 1 200); do [ -w $G ] && break; sleep 0.01; done
 		echo performance > $G
-		for i in $(seq 1 400); do [ -d /proc/$splash ] || break; sleep 0.05; done
+		for i in $(seq 1 400); do [ -n "$splash" ] && [ -d /proc/$splash ] || break; sleep 0.05; done
 		echo ondemand > $G
 		mark "governor: ondemand"
 	) &
 
 	# The GPU's own driver, then its display half (dc_sunxi), which waits
 	# for the panel to finish powering up: from here, in the background,
-	# beside the card's partition being found and mounted. Nothing needs them
-	# until TortOS's video setup, which waits for them if it has to
-	# (brick.c). Loaded beside launch.sh instead, they slowed whichever of its
+	# beside the card's partition being found and mounted (datapart).
+	# Nothing needs them until TortOS's video setup, which waits for them if
+	# it has to (brick.c). Loaded beside launch.sh instead, they slowed whichever of its
 	# card reads met them, 30-60 ms on some boots; from here, this script's
 	# start to TortOS's main took 213-226 ms where it was 210-266 that way and
 	# 240 loading them in turn (three cold boots each, 2026-10-18)
@@ -162,19 +59,6 @@ start() {
 		mark "gpu display"
 	) &
 
-	# The games partition: added over the rest of the card on the first boot
-	# of a freshly written card, checked when it wasn't unmounted cleanly,
-	# and given TortOS from the image when it has none or an older one
-	mkdir -p $SDCARD
-	games=$(part tortos)
-	[ -n "$games" ] || games=$(games_create)
-	if [ -n "$games" ]; then
-		repair $games
-		mount -t exfat -o noatime $games $SDCARD
-		[ -f /tmp/games-new ] && touch $SDCARD/.metadata_never_index
-		tortos_seed
-	fi
-	mark card
 	# The time before the kernel, from the timer that counts from reset
 	[ -x $L/sincereset ] && $L/sincereset >> /tmp/boot-times
 
@@ -188,83 +72,9 @@ start() {
 	# the pin an input: exported alone it stays disabled and reads a stale 1
 	[ -d /sys/class/gpio/gpio243 ] || echo 243 > /sys/class/gpio/export
 	echo in > /sys/class/gpio/gpio243/direction
-
-	start_tortos
-	mark tortos
-	start_usb
-	mark usb
-}
-
-# TortOS: the card's launch.sh, which starts Diatom and TortOS, keeps them
-# running and powers off when TortOS asks (Auto Off, or the power key), as
-# the Pixel 2's /etc/init.d/tortos runs it. Its pid for stop. With no
-# launch.sh the splash stays; the power key's long press still cuts the power
-start_tortos() {
-	if [ -f $LAUNCH ]; then
-		sh $LAUNCH < /dev/null > /dev/null 2>&1 &
-		echo $! > /tmp/tortos-loop.pid
-	else
-		echo "brick: no $LAUNCH; the splash stays" > /dev/kmsg
-	fi
-}
-
-# USB for bring-up: a network link on the cable, the Brick at 10.55.0.2 and
-# the computer on the other end given 10.55.0.1, with no router, so its own
-# internet is untouched. A shell over telnet, and over nc on 2323 in case
-# telnetd dies. Never in a release: neither asks for a password.
-start_usb() {
-	for i in $(seq 1 150); do [ -n "$(ls /sys/class/udc 2>/dev/null)" ] && break; sleep 0.1; done
-	udc=$(ls /sys/class/udc 2>/dev/null | head -1)
-	mount -t configfs configfs /sys/kernel/config
-	g=/sys/kernel/config/usb_gadget/brick
-	mkdir -p $g/strings/0x409 $g/configs/c.1/strings/0x409
-	echo 0x1d6b > $g/idVendor; echo 0x0104 > $g/idProduct
-	echo plastron > $g/strings/0x409/manufacturer
-	echo "Brick bring-up" > $g/strings/0x409/product
-	echo brick0001 > $g/strings/0x409/serialnumber
-	echo "bring-up" > $g/configs/c.1/strings/0x409/configuration
-	mkdir -p $g/functions/ecm.usb0
-	echo 02:62:72:69:63:01 > $g/functions/ecm.usb0/dev_addr
-	echo 02:62:72:69:63:02 > $g/functions/ecm.usb0/host_addr
-	ln -s $g/functions/ecm.usb0 $g/configs/c.1/
-	if [ -n "$udc" ] && echo "$udc" > $g/UDC 2>/dev/null; then
-		ifconfig usb0 10.55.0.2 netmask 255.255.255.0 up
-		: > /tmp/udhcpd.leases
-		udhcpd /etc/udhcpd.conf
-		telnetd -F -l /bin/sh -b 10.55.0.2 > /tmp/telnetd.log 2>&1 &
-		( while true; do nc -l -p 2323 -s 10.55.0.2 -e /bin/sh; sleep 0.2; done ) > /tmp/nc.log 2>&1 &
-	else
-		mark "usb: network didn't bind"
-	fi
-}
-
-# TortOS and Diatom ahead of everything else at shutdown: launch.sh first, or
-# it starts TortOS again
-stop() {
-	[ -f /tmp/tortos-loop.pid ] && kill $(cat /tmp/tortos-loop.pid) 2>/dev/null
-	killall -TERM tortos.elf muse diatom 2>/dev/null
-	for i in $(seq 1 20); do pidof diatom >/dev/null || break; sleep 0.1; done
-}
-
-# The card, waiting for the programs that ran from it to go, as the Pixel's
-# datapart does: unmounted at once, it was often still busy, and every next
-# boot found it marked as not properly unmounted
-unmount() {
-	grep -q " $SDCARD " /proc/mounts || return 0
-	n=0
-	until umount $SDCARD 2>/dev/null; do
-		n=$((n + 1))
-		if [ $n -ge 60 ]; then
-			echo "brick: $SDCARD still in use after 3 s, left for the next boot to check" > /dev/kmsg
-			return 1
-		fi
-		usleep 50000
-	done
 }
 
 case "$1" in
 start) start ;;
-stop) stop ;;
-unmount) unmount ;;
-*) echo "usage: $0 start|stop|unmount" >&2; exit 1 ;;
+*) echo "usage: $0 start" >&2; exit 1 ;;
 esac

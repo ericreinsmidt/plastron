@@ -1,0 +1,40 @@
+#!/bin/sh
+# USB for bring-up: a network link on the cable, the Brick at 10.55.0.2 and
+# the computer on the other end given 10.55.0.1, with no router, so its own
+# internet is untouched. A shell over telnet, and over nc on 2323 in case
+# telnetd dies. Never in a release: neither asks for a password. Last of
+# inittab's sysinit lines, after TortOS has started.
+
+mark() { echo "$(cut -d' ' -f1 /proc/uptime) $1" >> /tmp/boot-times; }
+
+start() {
+	for i in $(seq 1 150); do [ -n "$(ls /sys/class/udc 2>/dev/null)" ] && break; sleep 0.1; done
+	udc=$(ls /sys/class/udc 2>/dev/null | head -1)
+	mount -t configfs configfs /sys/kernel/config
+	g=/sys/kernel/config/usb_gadget/brick
+	mkdir -p $g/strings/0x409 $g/configs/c.1/strings/0x409
+	echo 0x1d6b > $g/idVendor; echo 0x0104 > $g/idProduct
+	echo plastron > $g/strings/0x409/manufacturer
+	echo "Brick bring-up" > $g/strings/0x409/product
+	echo brick0001 > $g/strings/0x409/serialnumber
+	echo "bring-up" > $g/configs/c.1/strings/0x409/configuration
+	mkdir -p $g/functions/ecm.usb0
+	echo 02:62:72:69:63:01 > $g/functions/ecm.usb0/dev_addr
+	echo 02:62:72:69:63:02 > $g/functions/ecm.usb0/host_addr
+	ln -s $g/functions/ecm.usb0 $g/configs/c.1/
+	if [ -n "$udc" ] && echo "$udc" > $g/UDC 2>/dev/null; then
+		ifconfig usb0 10.55.0.2 netmask 255.255.255.0 up
+		: > /tmp/udhcpd.leases
+		udhcpd /etc/udhcpd.conf
+		telnetd -F -l /bin/sh -b 10.55.0.2 > /tmp/telnetd.log 2>&1 &
+		( while true; do nc -l -p 2323 -s 10.55.0.2 -e /bin/sh; sleep 0.2; done ) > /tmp/nc.log 2>&1 &
+	else
+		mark "usb: network didn't bind"
+	fi
+	mark usb
+}
+
+case "$1" in
+start) start ;;
+*) echo "usage: $0 start" >&2; exit 1 ;;
+esac

@@ -1,25 +1,31 @@
-# The Brick's inittab, in place of Buildroot's default, after the Pixel's
-# (board/px2/rootfs-overlay/etc/inittab): no remount of / (rootswitch mounts
-# it read-write), no swap, no getty (nothing on screen would show it).
+# The Brick's inittab, after the Pixel 2's TortOS one
+# (board/tortos/rootfs-overlay/etc/inittab), line for line: the splash first,
+# the mounts, then the Brick's hardware (what the Pixel's kernel and daemons
+# do), the card's games partition, and TortOS, then the USB cable's bring-up
+# network. No remount of / (rootswitch mounts it), no swap, no getty (nothing
+# on screen would show it), and no rcS: the S scripts Buildroot's packages
+# install (syslogd, network, a second telnetd, ...) are not the Brick's start.
 
+::sysinit:/etc/init.d/splash start
 ::sysinit:/bin/mount -t proc proc /proc
 ::sysinit:/bin/mkdir -p /dev/pts /dev/shm
 ::sysinit:/bin/mount -a
-# The card, the GPU, the pad, then TortOS's launch.sh in the background, and
-# the USB link: see the script
 ::sysinit:/etc/init.d/brick start
+::sysinit:/etc/init.d/datapart start
+::sysinit:/etc/init.d/tortos start
 ::sysinit:/bin/mkdir -p /run/lock/subsys
 null::sysinit:/bin/ln -sf /proc/self/fd /dev/fd
 null::sysinit:/bin/ln -sf /proc/self/fd/0 /dev/stdin
 null::sysinit:/bin/ln -sf /proc/self/fd/1 /dev/stdout
 null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 ::sysinit:/bin/hostname -F /etc/hostname
+::sysinit:/etc/init.d/usbgadget start
 
 # TortOS and Diatom first (Diatom saves the running game on SIGTERM), then
 # everything else, then the card, then the root read-only, so the next boot
 # has no journal to replay
-::shutdown:/etc/init.d/brick stop
+::shutdown:/etc/init.d/tortos stop
 ::shutdown:/bin/kill -TERM -1
 ::shutdown:/bin/usleep 200000
-::shutdown:/etc/init.d/brick unmount
+::shutdown:/etc/init.d/datapart stop
 ::shutdown:/bin/umount -a -r
