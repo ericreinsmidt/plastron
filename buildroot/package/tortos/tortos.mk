@@ -52,8 +52,13 @@ define TORTOS_BUILD_CMDS
 	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) -f mk/cross.mk \
 		CC="$(TARGET_CC)" SYSROOT="$(STAGING_DIR)" DEVICE=$(TORTOS_DEVICE) \
 		BUILD=$(TORTOS_BUILD_DIR) VERSION="$(TORTOS_VERSION_NUMBER)" \
-		$(TORTOS_BUILD_DIR)/tortos.elf $(TORTOS_BUILD_DIR)/muse
+		$(TORTOS_BUILD_DIR)/tortos.elf $(TORTOS_BUILD_DIR)/muse $(TORTOS_EXTRA)
 endef
+#
+# And on the Brick, the one with Bluetooth, btplayer (tools/btplayer.c): a
+# headset's play, pause, next and previous for Muse, and its own volume,
+# run from the card by /etc/init.d/bluetooth
+TORTOS_EXTRA = $(if $(filter brick,$(TORTOS_DEVICE)),$(TORTOS_BUILD_DIR)/btplayer)
 
 # TortOS runs from the card's games partition, as on the Brick, so it can be
 # updated by copying files onto the card. What goes there is TortOS's own
@@ -71,6 +76,7 @@ define TORTOS_INSTALL_TARGET_CMDS
 	DEVICE=brick OUT=$(TORTOS_CARD) ZIP= VERSION="$(TORTOS_VERSION_NUMBER)" \
 		TORTOS_ELF=$(@D)/$(TORTOS_BUILD_DIR)/tortos.elf \
 		MUSE_ELF=$(@D)/$(TORTOS_BUILD_DIR)/muse \
+		BTPLAYER_ELF=$(@D)/$(TORTOS_BUILD_DIR)/btplayer \
 		DIATOM_ELF=$(DIATOM_DIR)/build/brick/diatom \
 		VENDOR_DIR=/tortos-vendor \
 		sh $(@D)/mk/payload.sh

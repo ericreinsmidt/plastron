@@ -10,6 +10,7 @@ M=/usr/lib/brick
 RFKILL=/sys/class/rfkill/rfkill0/state
 RUN=/var/run
 STATE=/var/lib/state
+BTPLAYER=/mnt/SDCARD/TortOS/btplayer
 
 # What Bluetooth keeps, on the card's plastron-state partition (ext4), as the
 # root is read-only: the pairings (/var/lib/bluetooth), the headsets' volumes
@@ -86,9 +87,15 @@ start() {
 	hciconfig hci0 up || return 1
 	daemon bluetoothd /usr/libexec/bluetooth/bluetoothd
 	daemon bluealsa bluealsa -S -p a2dp-source -p hfp-ag --a2dp-volume
+	# TortOS's btplayer, from the card when it is there: a headset's play,
+	# pause, next and previous for Muse (they arrive as keys on its AVRCP
+	# keyboard, which nothing else reads), and its own volume. After
+	# bluetoothd, whose restart forgets the player it registers
+	[ -x $BTPLAYER ] && daemon btplayer $BTPLAYER
 }
 
 stop() {
+	stopd btplayer
 	stopd bluealsa
 	stopd bluetoothd
 	stopd hciattach
