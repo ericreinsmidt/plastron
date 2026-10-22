@@ -1,10 +1,16 @@
 # Changes to Buildroot's BusyBox config (package/busybox/busybox.config) for
 # the Brick.
 #
-# No system logger, kernel logger or cron, as on the Pixel.
-# CONFIG_SYSLOGD is not set
+# No kernel logger or cron, as on the Pixel. A system logger, but only while
+# Bluetooth is on (/etc/init.d/bluetooth): bluetoothd and bluealsa log nowhere
+# else, and Muse's stall report saves what logread prints. Kept in a ring in
+# memory, 64 KB, never on the card.
 # CONFIG_KLOGD is not set
 # CONFIG_CROND is not set
+CONFIG_SYSLOGD=y
+CONFIG_FEATURE_IPC_SYSLOG=y
+CONFIG_FEATURE_IPC_SYSLOG_BUFFER_SIZE=64
+CONFIG_LOGREAD=y
 
 # The USB cable's network while the Brick is being brought up: a DHCP server
 # for the computer on the other end, telnet for a shell, and nc for sending

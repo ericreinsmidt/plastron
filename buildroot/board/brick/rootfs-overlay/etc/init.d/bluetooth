@@ -1,10 +1,10 @@
 #!/bin/sh
 # Bluetooth on and off: the XR829's Bluetooth over its UART (ttyS1), BlueZ and
-# bluez-alsa, for TortOS's Bluetooth menu and headsets. On: the modules, dbus,
-# the chip attached by hciattach (Allwinner's xradio type, which powers it
-# through rfkill and uploads its firmware), hci0 up, bluetoothd and bluealsa.
-# Off: those stopped and the radio powered off: a radio left on is battery
-# spent. Each daemon is found by its PID file, never by name, as in
+# bluez-alsa, for TortOS's Bluetooth menu and headsets. On: the system log,
+# the modules, dbus, the chip attached by hciattach (Allwinner's xradio type,
+# which powers it through rfkill and uploads its firmware), hci0 up,
+# bluetoothd and bluealsa. Off: those stopped and the radio powered off: a
+# radio left on is battery spent. Each daemon is found by its PID file, never by name, as in
 # /etc/init.d/wpa_supplicant.
 M=/usr/lib/brick
 RFKILL=/sys/class/rfkill/rfkill0/state
@@ -75,6 +75,10 @@ attach() {
 }
 
 start() {
+	# The system log, first, so it hears everything below: bluetoothd and
+	# bluealsa (-S) log only to it. A ring in memory (logread prints it),
+	# lost at power-off; Muse's stall report saves a copy to the card
+	daemon syslogd syslogd -n -C64
 	state
 	for m in bluetooth hci_uart xradio_btlpm xradio_btfdi; do
 		grep -q "^$m " /proc/modules || insmod $M/$m.ko || return 1
@@ -101,6 +105,7 @@ stop() {
 	stopd hciattach
 	rm -f /tmp/tortos_btsink
 	echo 0 > $RFKILL 2> /dev/null
+	stopd syslogd
 }
 
 case "$1" in
