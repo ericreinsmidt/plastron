@@ -69,6 +69,19 @@ start() {
 	fi
 	mkdir -p $MOUNT
 	mount -t exfat -o noatime $DATA $MOUNT || return 1
+	# The kernel's random numbers ready at once: last boot's seed from the
+	# card, and a fresh one written for the next. The read-only root can't
+	# keep it where Linux usually does, so it lives on the writable partition,
+	# as ROCKNIX keeps its own. Here, before TortOS starts: Mesa asks for
+	# random numbers as TortOS sets up its video, and with no seed that
+	# waited until the kernel had gathered its own, 4.0 s into the boot
+	# (2026-10-23). The seed the kernel counts is the one stop saves at
+	# shutdown; a new card's first boot, or one after a power loss, waits once.
+	# In the background: seedrng credits the seed at once, then writes the
+	# next and forces it onto the card, which on an SD card can take a few
+	# hundred milliseconds, and TortOS needn't wait for that
+	mkdir -p $MOUNT/.plastron/seedrng
+	seedrng -d $MOUNT/.plastron/seedrng > /dev/null 2>&1 &
 	# Keeps a Mac from building a Spotlight index of the whole card
 	if [ -n "$new" ]; then
 		touch $MOUNT/.metadata_never_index
@@ -84,6 +97,11 @@ start() {
 # that it is left to the repair at the next boot.
 stop() {
 	grep -q " $MOUNT " /proc/mounts || return 0
+	# A fresh seed for the next boot, now that the kernel's random numbers are
+	# long ready: only a seed made then is one the kernel can count on. The
+	# one written at boot counts only if the seed it found did, so without
+	# this a new card, or a boot after a power loss, would never recover
+	seedrng -d $MOUNT/.plastron/seedrng > /dev/null 2>&1
 	n=0
 	until umount $MOUNT 2>/dev/null; do
 		n=$((n + 1))

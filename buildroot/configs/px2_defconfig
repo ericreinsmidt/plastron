@@ -106,3 +106,14 @@ BR2_PACKAGE_WIRELESS_REGDB=y
 BR2_PACKAGE_LIBCURL=y
 BR2_PACKAGE_LIBCURL_CURL=y
 BR2_PACKAGE_LIBCURL_OPENSSL=y
+
+# The root read-only, squashfs with LZ4 (board/px2/genimage.cfg and
+# boot.cmd); ext4 still built beside it, for writing by hand while developing.
+# Read-only, Buildroot points /etc/dropbear into RAM, so dropbear makes its
+# host key at each boot rather than writing one to the root. And no random
+# seed script (urandom-scripts), which keeps its seed on the root: datapart
+# keeps it on the card instead, and uses it before TortOS starts
+BR2_TARGET_ROOTFS_SQUASHFS=y
+BR2_TARGET_ROOTFS_SQUASHFS4_LZ4=y
+# BR2_TARGET_GENERIC_REMOUNT_ROOTFS_RW is not set
+# BR2_PACKAGE_URANDOM_SCRIPTS is not set

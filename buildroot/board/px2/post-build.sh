@@ -28,3 +28,8 @@ fi
 
 # Finder leaves .DS_Store files in the overlay folders on a Mac
 find "$TARGET_DIR" -name .DS_Store -delete
+
+# The games partition's mount point, made here rather than at boot, as on the
+# Brick: on a squashfs root nothing can be made at boot, and datapart's mkdir
+# would fail, leaving the card unmounted and TortOS with nowhere to start from
+mkdir -p "$TARGET_DIR/mnt/SDCARD"

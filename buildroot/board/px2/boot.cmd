@@ -16,5 +16,6 @@ load ${devtype} ${devnum}:${distro_bootpart} ${fdt_addr_r} /rk3326s-gkd-pixel2.d
 # userspace does. For kernel messages on screen while debugging, turn
 # CONFIG_FRAMEBUFFER_CONSOLE back on; panic=30 then keeps a panic visible
 # instead of rebooting after 1 s.
-setenv bootargs "root=/dev/mmcblk0p2 rootwait rw console=tty1 panic=30"
+# The root is squashfs (board/px2/genimage.cfg), mounted read-only
+setenv bootargs "root=/dev/mmcblk0p2 rootfstype=squashfs ro rootwait console=tty1 panic=30"
 booti ${kernel_addr_r} - ${fdt_addr_r}
