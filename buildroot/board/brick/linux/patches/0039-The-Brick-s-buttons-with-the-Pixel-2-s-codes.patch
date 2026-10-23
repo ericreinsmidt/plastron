@@ -1,0 +1,142 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] The Brick's buttons with the GKD Pixel 2's codes: brick-pad
+ reports every button as a key, A, B, X and Y as BTN_SOUTH, EAST, NORTH and
+ WEST by their labels, the d-pad as BTN_DPAD_* and L2 and R2 as BTN_TL2 and
+ BTN_TR2, so TortOS and Diatom read both devices by code. It copied TrimUI's
+ gamepad until now, for software that read it as an SDL joystick: the d-pad
+ as a hat, L2 and R2 as axes, two axes that never moved, and B, A, Y, X in
+ that order
+
+---
+--- a/drivers/input/joystick/brick-pad.c
++++ b/drivers/input/joystick/brick-pad.c
+@@ -4,22 +4,15 @@
+  * from userspace, from the pin registers, so its device tree has nothing for
+  * them; this reads the same 19 pins every 10 ms, the volume keys among them.
+  *
+- * It reports what TrimUI's gamepad reports, so software written for it reads
+- * this one the same way: the buttons in evdev order (SDL numbers joystick
+- * buttons by code, B 0, A 1, Y 2, X 3, L1 4, R1 5, Select 6, Start 7, Menu 8,
+- * F1 9, F2 10, volume down 13, volume up 14), the d-pad as a hat, and L2 and
+- * R2 as axes, which keeps them out of that numbering. KEY_F1 and KEY_F2 are
+- * declared as TrimUI's are and never come; they hold 11 and 12, so the volume
+- * keys land where games' software looks for them (SDL numbers the low keycodes
+- * after the gamepad's). The device tree gives the volume keys to the LRADC
+- * keyboard, but on the Brick it never reports a thing, on TrimUI's kernel
+- * either: they are pins.
++ * Every one is a key, with the codes the GKD Pixel 2's pad sends, so TortOS
++ * and Diatom read both devices the same way, by code: A, B, X and Y as
++ * BTN_SOUTH, EAST, NORTH and WEST, named for their labels as the Pixel's are,
++ * the d-pad as BTN_DPAD_*, L2 and R2 as BTN_TL2 and BTN_TR2. Menu and the two
++ * front keys, which the Pixel doesn't have, are BTN_MODE, BTN_THUMBL and
++ * BTN_THUMBR. The device tree gives the volume keys to the LRADC keyboard,
++ * but on the Brick it never reports a thing, on TrimUI's kernel either: they
++ * are pins.
+  *
+- * It also has an X and a Y axis that never move. SDL takes an input device
+- * for a joystick only when it has both, and the Brick has no stick, which is
+- * why this isn't gpio-keys-polled: that driver can only report what a pin is
+- * behind.
+- *
+  * The buttons pull the pins low; the pull-ups are set here, as no pinctrl
+  * state covers these pins yet.
+  */
+@@ -42,34 +35,30 @@
+ 
+ struct brick_button {
+ 	int gpio;
+-	unsigned int type, code;
+-	int value;		/* an axis's value while held */
++	unsigned int code;
+ 	const char *name;
+ };
+ 
+-#define KEY(pin, c, n)		{ pin, EV_KEY, c, 1, n }
+-#define AXIS(pin, c, v, n)	{ pin, EV_ABS, c, v, n }
+-
+ static const struct brick_button buttons[] = {
+-	KEY(PD(13), BTN_SOUTH,  "B"),
+-	KEY(PD(12), BTN_EAST,   "A"),
+-	KEY(PD(19), BTN_NORTH,  "Y"),
+-	KEY(PD(18), BTN_WEST,   "X"),
+-	KEY(PB(4),  BTN_TL,     "L1"),
+-	KEY(PH(17), BTN_TR,     "R1"),
+-	KEY(PH(15), BTN_SELECT, "Select"),
+-	KEY(PH(16), BTN_START,  "Start"),
+-	KEY(PH(14), BTN_MODE,   "Menu"),
+-	KEY(PH(12), BTN_THUMBL, "F1"),
+-	KEY(PH(13), BTN_THUMBR, "F2"),
+-	AXIS(PD(17), ABS_HAT0Y, -1, "Up"),
+-	AXIS(PD(14), ABS_HAT0Y,  1, "Down"),
+-	AXIS(PD(15), ABS_HAT0X, -1, "Left"),
+-	AXIS(PD(16), ABS_HAT0X,  1, "Right"),
+-	AXIS(PB(2),  ABS_Z,      1, "L2"),
+-	AXIS(PB(5),  ABS_RZ,     1, "R2"),
+-	KEY(PD(20), KEY_VOLUMEDOWN, "Volume down"),
+-	KEY(PD(21), KEY_VOLUMEUP,   "Volume up"),
++	{ PD(12), BTN_SOUTH,      "A" },
++	{ PD(13), BTN_EAST,       "B" },
++	{ PD(18), BTN_NORTH,      "X" },
++	{ PD(19), BTN_WEST,       "Y" },
++	{ PB(4),  BTN_TL,         "L1" },
++	{ PH(17), BTN_TR,         "R1" },
++	{ PB(2),  BTN_TL2,        "L2" },
++	{ PB(5),  BTN_TR2,        "R2" },
++	{ PH(15), BTN_SELECT,     "Select" },
++	{ PH(16), BTN_START,      "Start" },
++	{ PH(14), BTN_MODE,       "Menu" },
++	{ PH(12), BTN_THUMBL,     "F1" },
++	{ PH(13), BTN_THUMBR,     "F2" },
++	{ PD(17), BTN_DPAD_UP,    "Up" },
++	{ PD(14), BTN_DPAD_DOWN,  "Down" },
++	{ PD(15), BTN_DPAD_LEFT,  "Left" },
++	{ PD(16), BTN_DPAD_RIGHT, "Right" },
++	{ PD(20), KEY_VOLUMEDOWN, "Volume down" },
++	{ PD(21), KEY_VOLUMEUP,   "Volume up" },
+ };
+ 
+ static struct input_dev *pad;
+@@ -77,22 +66,10 @@
+ 
+ static void brick_pad_poll(struct work_struct *work)
+ {
+-	int axis[ABS_CNT] = { 0 };
+ 	int i;
+ 
+-	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
+-		const struct brick_button *b = &buttons[i];
+-		bool held = !gpio_get_value(b->gpio);
+-
+-		if (b->type == EV_KEY)
+-			input_report_key(pad, b->code, held);
+-		else if (held)
+-			axis[b->code] += b->value;	/* both ways at once is centered */
+-	}
+-	input_report_abs(pad, ABS_HAT0X, axis[ABS_HAT0X]);
+-	input_report_abs(pad, ABS_HAT0Y, axis[ABS_HAT0Y]);
+-	input_report_abs(pad, ABS_Z, axis[ABS_Z]);
+-	input_report_abs(pad, ABS_RZ, axis[ABS_RZ]);
++	for (i = 0; i < ARRAY_SIZE(buttons); i++)
++		input_report_key(pad, buttons[i].code, !gpio_get_value(buttons[i].gpio));
+ 	input_sync(pad);
+ 
+ 	schedule_delayed_work(&poll_work, msecs_to_jiffies(POLL_MS));
+@@ -145,16 +122,7 @@
+ 	pad->phys = "brick-pad/input0";
+ 	pad->id.bustype = BUS_HOST;
+ 	for (i = 0; i < ARRAY_SIZE(buttons); i++)
+-		if (buttons[i].type == EV_KEY)
+-			input_set_capability(pad, EV_KEY, buttons[i].code);
+-	input_set_capability(pad, EV_KEY, KEY_F1);
+-	input_set_capability(pad, EV_KEY, KEY_F2);
+-	input_set_abs_params(pad, ABS_X, -1, 1, 0, 0);
+-	input_set_abs_params(pad, ABS_Y, -1, 1, 0, 0);
+-	input_set_abs_params(pad, ABS_Z, 0, 1, 0, 0);
+-	input_set_abs_params(pad, ABS_RZ, 0, 1, 0, 0);
+-	input_set_abs_params(pad, ABS_HAT0X, -1, 1, 0, 0);
+-	input_set_abs_params(pad, ABS_HAT0Y, -1, 1, 0, 0);
++		input_set_capability(pad, EV_KEY, buttons[i].code);
+ 
+ 	err = input_register_device(pad);
+ 	if (err) {
