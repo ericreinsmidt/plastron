@@ -29,7 +29,10 @@ create() {
 	# Root is mounted, so the kernel won't re-read the whole table; add the
 	# one partition instead
 	partx --add --nr 3 $CARD || return 1
-	mkfs.exfat -L "$DATA_LABEL" $DATA > /dev/null || return 1
+	# 32 KB clusters, as on the Brick: Linux reads a folder a whole cluster at
+	# a time, and mkfs.exfat's own choice, 128 KB on a card this size, made
+	# every folder TortOS reads at boot cost 128 KB of card
+	mkfs.exfat -c 32K -L "$DATA_LABEL" $DATA > /dev/null || return 1
 	echo "datapart: $DATA formatted as exFAT, label $DATA_LABEL" > /dev/kmsg
 }
 
@@ -50,6 +53,10 @@ repair() {
 }
 
 start() {
+	# The card read ahead 2 MB at a time rather than 128 KB, before anything
+	# after this reads it, as on the Brick (its /etc/init.d/brick), where it
+	# took 40-90 ms off TortOS's start. A built-in, so no process for it
+	echo 2048 > /sys/block/mmcblk0/queue/read_ahead_kb
 	new=
 	if [ ! -b $DATA ]; then
 		create || {
