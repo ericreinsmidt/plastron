@@ -1,0 +1,21 @@
+#!/bin/sh
+# The clock from the network, each time Wi-Fi gets or renews an address: one
+# sync with pool.ntp.org, then written to the hardware clock in UTC, so the
+# time survives a reboot without Wi-Fi. As on the Brick (its copy says more).
+# In the background, as udhcpc waits for its hooks; skipped while one is
+# still running. Tried six times, five seconds apart: the lease comes before
+# the network is quite ready to use, and a single try at boot failed and left
+# the clock wrong until the next renewal, hours later.
+case "$1" in
+	bound|renew) ;;
+	*) exit 0 ;;
+esac
+L=/var/run/ntp-sync
+mkdir $L 2> /dev/null || exit 0
+(
+	for i in 1 2 3 4 5 6; do
+		timeout 20 ntpd -n -q -p pool.ntp.org && hwclock -w -u && break
+		sleep 5
+	done
+	rmdir $L
+) > /dev/null 2>&1 &

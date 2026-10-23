@@ -15,3 +15,9 @@ CONFIG_DHCPD_LEASES_FILE="/var/lib/misc/udhcpd.leases"
 # tar's -z, for TortOS's Download logs (a .tar.gz), which failed with tar
 # saying 'invalid option -- z'. gzip itself was already in.
 CONFIG_FEATURE_SEAMLESS_GZ=y
+
+# The clock from the network when Wi-Fi has an address (the udhcpc hook
+# /usr/share/udhcpc/default.script.d/ntp), as on the Brick: ntpd as a client
+# only, and timeout, so a sync on a network that doesn't answer gives up
+CONFIG_NTPD=y
+CONFIG_TIMEOUT=y

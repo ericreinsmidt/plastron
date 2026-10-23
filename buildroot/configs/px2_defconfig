@@ -100,3 +100,9 @@ BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
 # rules rather than the kernel's conservative world ones (the kernel takes it
 # unsigned: linux-px2.config)
 BR2_PACKAGE_WIRELESS_REGDB=y
+# curl, which TortOS's online features run (src/net.c: scraping,
+# RetroAchievements), over OpenSSL, as on the Brick; TortOS brings its own CA
+# bundle
+BR2_PACKAGE_LIBCURL=y
+BR2_PACKAGE_LIBCURL_CURL=y
+BR2_PACKAGE_LIBCURL_OPENSSL=y
