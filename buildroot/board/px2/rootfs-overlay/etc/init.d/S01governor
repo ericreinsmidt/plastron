@@ -1,0 +1,30 @@
+#!/bin/sh
+# The CPU governor, as on the Brick (its /etc/init.d/brick): the kernel's
+# performance until the boot splash ends, so the boot runs at full
+# speed, then ondemand, rechecked every 50 ms and raised at 80% busy, which
+# the Brick found keeps a game's start and its resume from the in-game menu on
+# time. The splash's going is the sign: on the Pixel it ends with its
+# animation, about 0.3 s before TortOS's first frame, which ondemand, looking
+# every 50 ms, keeps at the top clock while TortOS is busy (the shelf came at
+# 2.43 s from reset, as before; 2026-10-23). 20 s is the bound if it never
+# ends. In the background, so the rest of the boot doesn't wait on it.
+#
+# ondemand reaches the top two clocks, 1248 and 1296 MHz, only because this
+# kernel has no energy model (linux-px2.config): with one, it rated them
+# inefficient and ondemand stopped at 1200, which left Yoshi's Island short
+# of frames (2026-10-23). At 1296 it played as under performance.
+case "$1" in
+start)
+	(
+		i=0
+		while [ $i -lt 400 ] && pidof splash > /dev/null; do
+			sleep 0.05
+			i=$((i + 1))
+		done
+		echo ondemand > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+		O=/sys/devices/system/cpu/cpufreq/ondemand
+		echo 50000 > $O/sampling_rate
+		echo 80 > $O/up_threshold
+	) > /dev/null 2>&1 &
+	;;
+esac
