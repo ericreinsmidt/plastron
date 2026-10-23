@@ -85,3 +85,18 @@ BR2_PACKAGE_UTIL_LINUX=y
 BR2_PACKAGE_UTIL_LINUX_BINARIES=y
 BR2_PACKAGE_UTIL_LINUX_PARTX=y
 BR2_PACKAGE_EXFATPROGS=y
+
+# Wi-Fi from a USB adapter (the kernel's rtl8xxxu, a module usbrole loads when
+# one is plugged in): Realtek's firmware for the chips it drives, the
+# TL-WN725N v2/v3's RTL8188EUS among them, and wpa_supplicant and wpa_cli,
+# which TortOS drives (src/wifi.c), over nl80211, as on the Brick
+BR2_PACKAGE_LINUX_FIRMWARE=y
+BR2_PACKAGE_LINUX_FIRMWARE_RTL_81XX=y
+BR2_PACKAGE_WPA_SUPPLICANT=y
+BR2_PACKAGE_WPA_SUPPLICANT_NL80211=y
+BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
+BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
+# And the wireless regulatory database, so the adapter follows the country's
+# rules rather than the kernel's conservative world ones (the kernel takes it
+# unsigned: linux-px2.config)
+BR2_PACKAGE_WIRELESS_REGDB=y

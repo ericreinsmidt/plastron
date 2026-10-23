@@ -1,0 +1,48 @@
+#!/bin/sh
+# Wi-Fi on and off, as TortOS asks (src/wifi.c: start, stop), from a USB
+# adapter: the Pixel 2 has no radio of its own. The adapter's driver is
+# loaded when it is plugged in (usbrole), so on is wlan0 up and
+# wpa_supplicant, its control socket in /var/run/wpa_supplicant and its saved
+# networks on the card, so they outlive system updates. Off: the supplicant
+# and any DHCP client gone, and wlan0 down. The adapter stays powered while
+# it is plugged in; unplugging it is what saves its power.
+#
+# The supplicant is found by its PID file and its socket, never by name: this
+# script is called wpa_supplicant too (see the Brick's).
+CONF=${USERDATA_PATH:-/mnt/SDCARD/.userdata/pixel2}/wifi/wpa_supplicant.conf
+PID=/var/run/wpa_supplicant.pid
+
+start() {
+	# Just plugged in, its driver may still be loading
+	for i in $(seq 1 50); do
+		[ -d /sys/class/net/wlan0 ] && break
+		sleep 0.1
+	done
+	ifconfig wlan0 up || return 1
+	mkdir -p "${CONF%/*}"
+	[ -f "$CONF" ] ||
+		printf 'ctrl_interface=/var/run/wpa_supplicant\nupdate_config=1\n' > "$CONF"
+	wpa_cli -i wlan0 ping > /dev/null 2>&1 ||
+		wpa_supplicant -B -i wlan0 -D nl80211 -c "$CONF" -P $PID
+}
+
+stop() {
+	p=$(cat $PID 2> /dev/null)
+	if [ -n "$p" ]; then
+		kill "$p" 2> /dev/null
+		for i in $(seq 1 20); do
+			[ -d "/proc/$p" ] || break
+			sleep 0.1
+		done
+		rm -f $PID
+	fi
+	killall -q udhcpc
+	ifconfig wlan0 down 2> /dev/null
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; start ;;
+	*) echo "usage: $0 start|stop|restart" >&2; exit 1 ;;
+esac

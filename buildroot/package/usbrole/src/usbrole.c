@@ -18,10 +18,17 @@
  * And when a DAC's sound card appears, it turns the DAC's own playback volume
  * to full: the volume the player moves is a software one in front of it
  * (asound.conf's pcm.usb), the same for every DAC.
+ *
+ * And it loads the driver for anything plugged in that has one as a module,
+ * by the alias the kernel gives the device, as udev would: a USB Wi-Fi
+ * adapter's, whose driver and wireless stack are modules so a boot without
+ * one starts none of it. Everything else here is built in, and modprobe
+ * finds nothing to load for it.
  */
 #include <dirent.h>
 #include <fcntl.h>
 #include <linux/netlink.h>
+#include <signal.h>
 #include <sound/asound.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -162,6 +169,37 @@ static void dac_full(int card)
 	}
 }
 
+/* The driver for a device, by its alias ("usb:v0BDAp8179..."). Not waited
+ * for: SIGCHLD is ignored, so nothing has to reap it. */
+static void load_driver(const char *alias)
+{
+	if (strncmp(alias, "usb:", 4) || fork() != 0)
+		return;
+	execl("/sbin/modprobe", "modprobe", "-q", alias, (char *)NULL);
+	_exit(127);
+}
+
+/* Devices plugged in before this started: the boot's own events came before
+ * there was anyone to hear them */
+static void load_present(void)
+{
+	DIR *d = opendir("/sys/bus/usb/devices");
+	struct dirent *e;
+
+	if (!d)
+		return;
+	while ((e = readdir(d))) {
+		char path[320], alias[256];
+
+		if (e->d_name[0] == '.')
+			continue;
+		snprintf(path, sizeof path, "/sys/bus/usb/devices/%s/modalias", e->d_name);
+		if (read_line(path, alias, sizeof alias) == 0)
+			load_driver(alias);
+	}
+	closedir(d);
+}
+
 int main(void)
 {
 	struct sockaddr_nl addr = { .nl_family = AF_NETLINK, .nl_groups = 1 };
@@ -181,10 +219,12 @@ int main(void)
 		return 1;
 	}
 
+	signal(SIGCHLD, SIG_IGN);
 	follow_pin();
 	/* A DAC already in, if init restarted us. Card 0 is the RK817. */
 	for (int card = 1; card < 8; card++)
 		dac_full(card);
+	load_present();
 	/* The PHY's extcon announces each change of its cables as a uevent:
 	 * "change@/devices/.../extcon/extcon0". A sound card's controls arrive
 	 * as "add@/devices/.../sound/card1/controlC1", the node already made. */
@@ -201,5 +241,10 @@ int main(void)
 		else if (!strncmp(msg, "add@", 4) && last && !strncmp(last, "/controlC", 9) &&
 		         atoi(last + 9) > 0)
 			dac_full(atoi(last + 9));
+		/* The message's fields follow its header, each ended by a 0 */
+		if (!strncmp(msg, "add@", 4))
+			for (const char *f = msg + strlen(msg) + 1; f < msg + got; f += strlen(f) + 1)
+				if (!strncmp(f, "MODALIAS=", 9))
+					load_driver(f + 9);
 	}
 }
