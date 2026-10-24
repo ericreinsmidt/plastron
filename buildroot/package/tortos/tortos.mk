@@ -75,7 +75,7 @@ ifeq ($(TORTOS_DEVICE),brick)
 # The Brick's: TortOS's payload for it, which /etc/init.d/tortos copies onto
 # the card
 define TORTOS_INSTALL_TARGET_CMDS
-	DEVICE=brick OUT=$(TORTOS_CARD) ZIP= VERSION="$(TORTOS_VERSION_NUMBER)" \
+	DEVICE=brick OUT=$(TORTOS_CARD) VERSION="$(TORTOS_VERSION_NUMBER)" \
 		TORTOS_ELF=$(@D)/$(TORTOS_BUILD_DIR)/tortos.elf \
 		MUSE_ELF=$(@D)/$(TORTOS_BUILD_DIR)/muse \
 		BTPLAYER_ELF=$(@D)/$(TORTOS_BUILD_DIR)/btplayer \
@@ -85,7 +85,7 @@ define TORTOS_INSTALL_TARGET_CMDS
 endef
 else
 define TORTOS_INSTALL_TARGET_CMDS
-	DEVICE=pixel2 OUT=$(TORTOS_CARD) ZIP= VERSION="$(TORTOS_VERSION_NUMBER)" \
+	DEVICE=pixel2 OUT=$(TORTOS_CARD) VERSION="$(TORTOS_VERSION_NUMBER)" \
 		TORTOS_ELF=$(@D)/$(TORTOS_BUILD_DIR)/tortos.elf \
 		MUSE_ELF=$(@D)/$(TORTOS_BUILD_DIR)/muse \
 		DIATOM_ELF=$(DIATOM_DIR)/build/pixel2/diatom \
