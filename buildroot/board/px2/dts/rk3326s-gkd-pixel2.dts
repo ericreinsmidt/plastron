@@ -838,6 +838,16 @@
 	sd-uhs-sdr25;
 	sd-uhs-sdr50;
 	sd-uhs-sdr104;
+	/*
+	 * Tuning for SDR104 tests the sampling phase in 4 degree steps rather
+	 * than the driver's 360 single degrees: each phase is a tuning exchange
+	 * with the card, and testing 360 took 282 ms of every boot, which the
+	 * root mount waited on; 90 takes 136-141 ms (2026-10-23). Fewer still
+	 * gained nothing steady: 36 took 131 ms twice and 257 once, as phases
+	 * that fail wait out a timeout and dominate. The phase chosen is the
+	 * middle of the good window either way, here about 180 degrees wide
+	 */
+	rockchip,desired-num-phases = <90>;
 	vmmc-supply = <&vcc_sd>;
 	vqmmc-supply = <&vccio_sd>;
 	status = "okay";
