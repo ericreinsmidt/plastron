@@ -23,7 +23,7 @@ SOURCES := -v $(TORTOS_SRC):/tortos:ro -v $(DIATOM_SRC):/diatom:ro -v $(TORTOS_V
 	$(if $(wildcard $(TORTOS_SS_ENV)),-v $(TORTOS_SS_ENV):/tortos-ss.env:ro)
 DOCKER_RUN := docker run --rm -t -v $(CURDIR):/src:ro $(SOURCES) -v $(VOLUME):/work $(IMAGE)
 
-.PHONY: all builder volume image base brick brick-kernel brick-bootloader brick-probe bootloader shell linux-rebuild copy-out clean-output release
+.PHONY: all builder volume image base brick brick-inputs brick-kernel brick-bootloader brick-probe bootloader shell linux-rebuild copy-out clean-output release release-pixel2 release-brick
 
 all: image
 
@@ -51,8 +51,8 @@ BRICK_GPU ?= $(HOME)/brick-runtime/gpu-ddk-1.11
 # And XRadio's firmware for its XR829 Wi-Fi and Bluetooth chip, closed the same
 # way: from BRICK_XR829, mounted at /brick-xr829 (package/xr829-firmware)
 BRICK_XR829 ?= $(HOME)/brick-runtime/xr829
-# Its kernel and modules come from make brick-kernel, in this volume.
-brick: builder volume
+# The closed parts the Brick's build needs, there before it starts
+brick-inputs:
 	@[ -d "$(BRICK_GPU)/lib64" ] || { echo "no GPU libraries in $(BRICK_GPU): the Brick needs" \
 		"Imagination's PowerVR DDK 1.11@5516664 userspace libraries for the GE8300," \
 		"which plastron doesn't include (buildroot/package/pvr-ge8300/Config.in" \
@@ -60,11 +60,13 @@ brick: builder volume
 	@[ -f "$(BRICK_XR829)/fw_xr829.bin" ] || { echo "no XR829 firmware in $(BRICK_XR829): the" \
 		"Brick's Wi-Fi needs XRadio's firmware files, which plastron doesn't include" \
 		"(buildroot/package/xr829-firmware/Config.in says which and where from)" >&2; exit 1; }
+BRICK_RUN := docker run --rm -t -v $(CURDIR):/src:ro $(SOURCES) \
+	-v $(BRICK_GPU):/brick-gpu:ro -v $(BRICK_XR829):/brick-xr829:ro -v $(VOLUME):/work $(IMAGE)
+# Its kernel and modules come from make brick-kernel, in this volume.
+brick: builder volume brick-inputs
 	@docker run --rm -v $(VOLUME):/work $(IMAGE) test -f /work/brick-kernel/images/pvrsrvkm.ko || \
 		{ echo "no Brick kernel modules yet: make brick-kernel first" >&2; exit 1; }
-	docker run --rm -t -e FLAVOR=brick -v $(CURDIR):/src:ro $(SOURCES) \
-		-v $(BRICK_GPU):/brick-gpu:ro -v $(BRICK_XR829):/brick-xr829:ro \
-		-v $(VOLUME):/work $(IMAGE) sh /src/scripts/build.sh $(BRICK_TARGET)
+	$(BRICK_RUN) env FLAVOR=brick sh /src/scripts/build.sh $(BRICK_TARGET)
 	$(if $(BRICK_TARGET),,$(MAKE) copy-out OUTPUT=output-brick CARD=brick-sdcard.img)
 
 # The TrimUI Brick's kernel and the modules it loads: Allwinner's Linux 4.9
@@ -116,18 +118,36 @@ linux-rebuild: builder volume
 	$(DOCKER_RUN) sh /src/scripts/build.sh linux-dirclean all
 	$(MAKE) copy-out
 
-# What a release carries, in out/release (scripts/release.sh): the image
-# without the developer's SSH key, compressed, and the licenses and sources of
-# everything in it. The version is TortOS's, from its Makefile.
+# What a release carries, in out/release (scripts/release.sh): each device's
+# image without the developer's SSH key, compressed, and the licenses and
+# sources of everything in it, each built clean, then SHA256SUMS over all
+# four, the one file TortOS Installer checks downloads against. The Brick's
+# kernel and modules are built again from their patches first. The version is
+# TortOS's, from its Makefile.
+#
+# The two devices build side by side: Buildroot builds one package at a time,
+# much of it on one core, so one build leaves most of the machine idle. Each
+# one's output goes to out/release-<device>.log, its end shown if it fails.
 VERSION ?= $(shell sed -n 's/^VERSION ?= //p' $(TORTOS_SRC)/Makefile)
-release: builder volume
+release: builder volume brick-inputs brick-kernel
 	@[ -n "$(VERSION)" ] || { echo "no VERSION in $(TORTOS_SRC)/Makefile" >&2; exit 1; }
-	$(DOCKER_RUN) sh /src/scripts/release.sh $(VERSION)
+	docker run --rm -v $(VOLUME):/work --user root $(IMAGE) rm -rf /work/release
+	mkdir -p out
+	$(MAKE) -j2 release-pixel2 release-brick VERSION=$(VERSION)
+	docker run --rm -v $(VOLUME):/work $(IMAGE) sh -c 'cd /work/release && sha256sum *.img.xz *.tar > SHA256SUMS && cat SHA256SUMS'
 	rm -rf out/release
 	mkdir -p out/release
 	docker run --rm -v $(VOLUME):/work -v $(CURDIR)/out:/out --user root $(IMAGE) \
 		sh -c 'cp /work/release/* /out/release/ && chown -R $(shell id -u):$(shell id -g) /out/release'
 	@ls -l out/release
+
+release-pixel2:
+	$(DOCKER_RUN) sh /src/scripts/release.sh $(VERSION) pixel2 > out/release-pixel2.log 2>&1 || \
+		{ tail -30 out/release-pixel2.log; exit 1; }
+
+release-brick:
+	$(BRICK_RUN) sh /src/scripts/release.sh $(VERSION) brick > out/release-brick.log 2>&1 || \
+		{ tail -30 out/release-brick.log; exit 1; }
 
 OUTPUT ?= output
 CARD ?= sdcard.img

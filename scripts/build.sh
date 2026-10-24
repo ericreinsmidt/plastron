@@ -18,6 +18,8 @@ base) OUTPUT=/work/output-base ;;
 brick) OUTPUT=/work/output-brick DEFCONFIG=brick_defconfig ;;
 *) echo "unknown FLAVOR $FLAVOR" >&2; exit 1 ;;
 esac
+# A release builds in an empty output folder of its own (scripts/release.sh)
+OUTPUT=${PLASTRON_OUTPUT:-$OUTPUT}
 
 mkdir -p /work/dl
 if [ ! -d "$BUILDROOT" ]; then
