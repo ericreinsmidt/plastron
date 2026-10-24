@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] NCM's packet signature follows the computer's choices, as in
+ later kernels: set when the function resets, and worked out again after every
+ request, so it matches the packet format (16- or 32-bit) as well as the CRC
+ mode. It was set only by the CRC mode request, for the 16-bit format: macOS
+ and Linux keep that format, Windows doesn't, so on Windows the Brick threw
+ away every packet ("Wrong NDP SIGN") and sent its own with the wrong
+ signature
+
+---
+--- a/drivers/usb/gadget/function/f_ncm.c
++++ b/drivers/usb/gadget/function/f_ncm.c
+@@ -532,6 +532,7 @@
+ {
+ 	ncm->parser_opts = &ndp16_opts;
+ 	ncm->is_crc = false;
++	ncm->ndp_sign = ncm->parser_opts->ndp_sign;
+ 	ncm->port.cdc_filter = DEFAULT_FILTER;
+ 
+ 	/* doesn't make sense for ncm, fixed size used */
+@@ -846,6 +847,8 @@
+ 			ctrl->bRequestType, ctrl->bRequest,
+ 			w_value, w_index, w_length);
+ 	}
++	ncm->ndp_sign = ncm->parser_opts->ndp_sign |
++		(ncm->is_crc ? NCM_NDP_HDR_CRC : 0);
+ 
+ 	/* respond with data transfer or status phase? */
+ 	if (value >= 0) {

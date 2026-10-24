@@ -1,11 +1,40 @@
 #!/bin/sh
-# USB for bring-up: a network link on the cable, the Brick at 10.55.0.2 and
-# the computer on the other end given 10.55.0.1, with no router, so its own
-# internet is untouched. A shell over telnet, and over nc on 2323 in case
-# telnetd dies. Never in a release: neither asks for a password. Last of
-# inittab's sysinit lines, after TortOS has started.
+# USB networking over the cable (CDC NCM), as on the GKD Pixel 2: TortOS's
+# Down To The Wire, the Brick at 10.55.0.2 and the computer on the other end
+# given 10.55.0.1 (/etc/udhcpd.conf), with no router, so its own internet is
+# untouched. 10.55 rather than the Pixel's 10.42, so both can be on one
+# computer at once. Last of inittab's sysinit lines, after TortOS has started.
+#
+# NCM, not ECM: macOS and Linux have drivers for both, but Windows only for
+# NCM. And Microsoft's OS descriptors below, naming Windows' own NCM driver
+# (WINNCM), so Windows loads it when the cable goes in rather than showing an
+# unknown device. The MAC addresses are fixed, so the computer keeps one
+# interface for this device.
+#
+# And for development, a shell over telnet, and over nc on 2323 in case
+# telnetd dies. Neither asks for a password: never in a release build.
 
 mark() { echo "$(cut -d' ' -f1 /proc/uptime) $1" >> /tmp/boot-times; }
+
+# The kernel never tells the USB controller the cable went (it takes the cable
+# as always present), so the link stayed up, as if a computer were still on
+# it, through an unplug and on onto a charger. So this follows the cable's
+# power: when it goes, the controller lets go of the bus and the link drops;
+# when it comes back the controller takes the bus again, and the link comes up
+# only if a computer answers, which a charger never does. TortOS's Down To The
+# Wire goes by the link (src/device/brick.c). Once a second, with the shell's
+# own read
+cable_watch() {
+	u=/sys/class/udc/$udc/soft_connect
+	read was < /sys/class/power_supply/axp2202-usb/online
+	while :; do
+		sleep 1
+		read now < /sys/class/power_supply/axp2202-usb/online
+		[ "$now" = "$was" ] && continue
+		[ "$now" = 1 ] && echo connect > $u || echo disconnect > $u
+		was=$now
+	done
+}
 
 start() {
 	for i in $(seq 1 150); do [ -n "$(ls /sys/class/udc 2>/dev/null)" ] && break; sleep 0.1; done
@@ -13,21 +42,34 @@ start() {
 	mount -t configfs configfs /sys/kernel/config
 	g=/sys/kernel/config/usb_gadget/brick
 	mkdir -p $g/strings/0x409 $g/configs/c.1/strings/0x409
-	echo 0x1d6b > $g/idVendor; echo 0x0104 > $g/idProduct
-	echo plastron > $g/strings/0x409/manufacturer
-	echo "Brick bring-up" > $g/strings/0x409/product
-	echo brick0001 > $g/strings/0x409/serialnumber
-	echo "bring-up" > $g/configs/c.1/strings/0x409/configuration
-	mkdir -p $g/functions/ecm.usb0
-	echo 02:62:72:69:63:01 > $g/functions/ecm.usb0/dev_addr
-	echo 02:62:72:69:63:02 > $g/functions/ecm.usb0/host_addr
-	ln -s $g/functions/ecm.usb0 $g/configs/c.1/
+	echo 0x1d6b > $g/idVendor               # Linux Foundation
+	echo 0x0104 > $g/idProduct              # Multifunction Composite Gadget
+	echo 0x0200 > $g/bcdUSB
+	# Windows remembers a device's driver by vendor, product and this
+	# number, so a computer that met the ECM Brick looks afresh at the NCM
+	# one rather than keeping what it decided the first time
+	echo 0x0201 > $g/bcdDevice
+	echo TortOS > $g/strings/0x409/manufacturer
+	echo "TrimUI Brick" > $g/strings/0x409/product
+	echo NCM > $g/configs/c.1/strings/0x409/configuration
+	mkdir -p $g/functions/ncm.usb0
+	echo 02:62:72:69:63:01 > $g/functions/ncm.usb0/dev_addr
+	echo 02:62:72:69:63:02 > $g/functions/ncm.usb0/host_addr
+	ln -s $g/functions/ncm.usb0 $g/configs/c.1/
+	# Microsoft's OS descriptors: the signature Windows asks for, and the
+	# NCM interface marked as WINNCM, Windows' own driver
+	echo 1 > $g/os_desc/use
+	echo 0xcd > $g/os_desc/b_vendor_code
+	echo MSFT100 > $g/os_desc/qw_sign
+	echo WINNCM > $g/functions/ncm.usb0/os_desc/interface.ncm/compatible_id
+	ln -s $g/configs/c.1 $g/os_desc/
 	if [ -n "$udc" ] && echo "$udc" > $g/UDC 2>/dev/null; then
 		ifconfig usb0 10.55.0.2 netmask 255.255.255.0 up
 		: > /tmp/udhcpd.leases
 		udhcpd /etc/udhcpd.conf
 		telnetd -F -l /bin/sh -b 10.55.0.2 > /tmp/telnetd.log 2>&1 &
 		( while true; do nc -l -p 2323 -s 10.55.0.2 -e /bin/sh; sleep 0.2; done ) > /tmp/nc.log 2>&1 &
+		cable_watch &
 	else
 		mark "usb: network didn't bind"
 	fi

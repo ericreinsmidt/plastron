@@ -1,0 +1,123 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] Windows loads its own NCM driver for the Brick: the NCM
+ function takes Microsoft's OS descriptors, as RNDIS already does in this
+ kernel, so configfs has functions/ncm.usb0/os_desc/interface.ncm for the
+ WINNCM compatible ID. Later kernels have it; 4.9 doesn't, and without it
+ Windows couldn't reach the Brick over the cable
+
+---
+--- a/drivers/usb/gadget/function/u_ncm.h
++++ b/drivers/usb/gadget/function/u_ncm.h
+@@ -23,6 +23,10 @@
+ 	struct net_device		*net;
+ 	bool				bound;
+ 
++	struct config_group		*ncm_interf_group;
++	struct usb_os_desc		ncm_os_desc;
++	char				ncm_ext_compat_id[16];
++
+ 	/*
+ 	 * Read/write access to configfs attributes is handled by configfs.
+ 	 *
+--- a/drivers/usb/gadget/function/f_ncm.c
++++ b/drivers/usb/gadget/function/f_ncm.c
+@@ -26,6 +26,7 @@
+ #include "u_ether.h"
+ #include "u_ether_configfs.h"
+ #include "u_ncm.h"
++#include "configfs.h"
+ 
+ /*
+  * This function is a "CDC Network Control Model" (CDC NCM) Ethernet link.
+@@ -1445,6 +1446,15 @@
+ 	ncm_data_intf.iInterface = us[STRING_DATA_IDX].id;
+ 	ecm_desc.iMACAddress = us[STRING_MAC_IDX].id;
+ 	ncm_iad_desc.iFunction = us[STRING_IAD_IDX].id;
++
++	if (cdev->use_os_string) {
++		f->os_desc_table = kzalloc(sizeof(*f->os_desc_table),
++					   GFP_KERNEL);
++		if (!f->os_desc_table)
++			return -ENOMEM;
++		f->os_desc_n = 1;
++		f->os_desc_table[0].os_desc = &ncm_opts->ncm_os_desc;
++	}
+ 
+ 	/* allocate instance-specific interface IDs */
+ 	status = usb_interface_id(c, f);
+@@ -1456,6 +1466,10 @@
+ 	ncm_control_intf.bInterfaceNumber = status;
+ 	ncm_union_desc.bMasterInterface0 = status;
+ 
++	if (cdev->use_os_string)
++		f->os_desc_table[0].if_id =
++			ncm_iad_desc.bFirstInterface;
++
+ 	status = usb_interface_id(c, f);
+ 	if (status < 0)
+ 		goto fail;
+@@ -1536,6 +1550,9 @@
+ 	return 0;
+ 
+ fail:
++	kfree(f->os_desc_table);
++	f->os_desc_n = 0;
++
+ 	if (ncm->notify_req) {
+ 		kfree(ncm->notify_req->buf);
+ 		usb_ep_free_request(ncm->notify, ncm->notify_req);
+@@ -1590,16 +1607,22 @@
+ 		gether_cleanup(netdev_priv(opts->net));
+ 	else
+ 		free_netdev(opts->net);
++	kfree(opts->ncm_interf_group);
+ 	kfree(opts);
+ }
+ 
+ static struct usb_function_instance *ncm_alloc_inst(void)
+ {
+ 	struct f_ncm_opts *opts;
++	struct usb_os_desc *descs[1];
++	char *names[1];
++	struct config_group *ncm_interf_group;
+ 
+ 	opts = kzalloc(sizeof(*opts), GFP_KERNEL);
+ 	if (!opts)
+ 		return ERR_PTR(-ENOMEM);
++	opts->ncm_os_desc.ext_compat_id = opts->ncm_ext_compat_id;
++
+ 	mutex_init(&opts->lock);
+ 	opts->func_inst.free_func_inst = ncm_free_inst;
+ 	opts->net = gether_setup_default();
+@@ -1609,7 +1632,20 @@
+ 		return ERR_CAST(net);
+ 	}
+ 
++	INIT_LIST_HEAD(&opts->ncm_os_desc.ext_prop);
++
++	descs[0] = &opts->ncm_os_desc;
++	names[0] = "ncm";
++
+ 	config_group_init_type_name(&opts->func_inst.group, "", &ncm_func_type);
++	ncm_interf_group =
++		usb_os_desc_prepare_interf_dir(&opts->func_inst.group, 1, descs,
++					       names, THIS_MODULE);
++	if (IS_ERR(ncm_interf_group)) {
++		ncm_free_inst(&opts->func_inst);
++		return ERR_CAST(ncm_interf_group);
++	}
++	opts->ncm_interf_group = ncm_interf_group;
+ 
+ 	return &opts->func_inst;
+ }
+@@ -1633,6 +1669,9 @@
+ 
+ 	DBG(c->cdev, "ncm unbind\n");
+ 
++	kfree(f->os_desc_table);
++	f->os_desc_n = 0;
++
+ 	hrtimer_cancel(&ncm->task_timer);
+ 	tasklet_kill(&ncm->tx_tasklet);
+ 

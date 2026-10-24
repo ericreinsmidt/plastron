@@ -1,0 +1,18 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] The Brick's USB cable speaks NCM rather than ECM, as the GKD
+ Pixel 2's does, for Down To The Wire: macOS and Linux have drivers for both,
+ Windows only for NCM
+
+---
+--- a/arch/arm64/configs/brick_defconfig
++++ b/arch/arm64/configs/brick_defconfig
+@@ -211,7 +211,7 @@
+ CONFIG_USB_SUNXI_UDC0=y
+ CONFIG_USB_CONFIGFS=y
+ CONFIG_USB_CONFIGFS_ACM=y
+-CONFIG_USB_CONFIGFS_ECM=y
++CONFIG_USB_CONFIGFS_NCM=y
+ CONFIG_USB_CONFIGFS_MASS_STORAGE=y
+ CONFIG_USB_CONFIGFS_F_FS=y
+ CONFIG_USB_CONFIGFS_F_MTP=y
