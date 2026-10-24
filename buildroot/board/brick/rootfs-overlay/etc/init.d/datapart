@@ -7,8 +7,20 @@
 # /tmp/boot-times.
 
 SDCARD=/mnt/SDCARD
+# When this system was built, in seconds: set by board/brick/post-build.sh
+BUILT=0
 
 mark() { echo "$(cut -d' ' -f1 /proc/uptime) $1" >> /tmp/boot-times; }
+
+# A Brick that ran TrimUI's firmware has its clock in 2076: that firmware kept
+# the RTC's year from another base (2026 as 56), which this kernel reads as
+# 2076. Set once, on a fresh card's first boot, to when this system was built:
+# near enough until Wi-Fi or Date & Time puts it right, and kept from then on
+clock_once() {
+	[ "$BUILT" -gt 0 ] && [ "$(date +%Y)" -gt 2070 ] || return 0
+	date -u -s "@$BUILT" > /dev/null && hwclock -w -u &&
+		echo "datapart: the clock read after 2070; set to $(date -u)" > /dev/kmsg
+}
 
 # A card partition that wasn't unmounted cleanly is checked and repaired before
 # it is mounted, as the Pixel's datapart does: Linux won't, and keeps the
@@ -67,7 +79,10 @@ games_create() {
 start() {
 	mkdir -p $SDCARD
 	games=$(part tortos)
-	[ -n "$games" ] || games=$(games_create)
+	if [ -z "$games" ]; then
+		clock_once
+		games=$(games_create)
+	fi
 	if [ -n "$games" ]; then
 		repair $games
 		mount -t exfat -o noatime $games $SDCARD

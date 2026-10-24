@@ -12,6 +12,12 @@ if [ -f "$INIT" ] && [ -f "$SEED_VERSION" ]; then
 	grep "^SEED_V=" "$INIT"
 fi
 
+# When this system was built, into datapart, which sets a clock that reads
+# after 2070 (TrimUI's firmware's RTC year) to it on a fresh card's first boot
+DATAPART=$TARGET_DIR/etc/init.d/datapart
+sed -i "s/^BUILT=.*/BUILT=$(date +%s)/" "$DATAPART"
+grep "^BUILT=" "$DATAPART"
+
 # Finder leaves .DS_Store files in the overlay folders on a Mac
 find "$TARGET_DIR" -name .DS_Store -delete
 
