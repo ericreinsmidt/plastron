@@ -24,7 +24,7 @@ Diatom's.
   they come from: `buildroot/board/px2/third-party-packages.md` for the GKD
   Pixel 2 and `buildroot/board/brick/third-party-packages.md` for the TrimUI
   Brick, made from Buildroot's own manifest of a release build
-  (`scripts/third-party.sh`). Among them: glibc, BusyBox, SDL2 with
+  (`scripts/third-party.py`). Among them: glibc, BusyBox, SDL2 with
   SDL2_image and SDL2_ttf, FFmpeg, ALSA, curl, OpenSSL, SQLite, zlib, libpng,
   exfatprogs, wpa_supplicant, and on the Brick BlueZ and bluez-alsa.
 - **Josefin Sans** (SIL Open Font License 1.1), by Santiago Orozco: the boot
