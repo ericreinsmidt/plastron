@@ -16,6 +16,7 @@ the boot loader and the closed parts.
 | busybox | 1.37.0 | GPL-2.0, bzip2-1.0.4 | https://www.busybox.net/downloads |
 | dbus | 1.14.10 | AFL-2.1 or GPL-2.0+ (library, tools), GPL-2.0+ (tools) | https://dbus.freedesktop.org/releases/dbus |
 | diatom | from its repository | MPL-2.0 | Diatom, https://github.com/ericreinsmidt/diatom |
+| dropbear | 2026.91 | MIT, BSD-2-Clause, Public domain, Unlicense, WTFPL | https://matt.ucc.asn.au/dropbear/releases |
 | exfatprogs | 1.2.9 | GPL-2.0+ | https://github.com/exfatprogs/exfatprogs/releases/download/1.2.9 |
 | expat | 2.8.1 | MIT | https://github.com/libexpat/libexpat/releases/download/R_2_8_1 |
 | ffmpeg | 6.1.5 | LGPL-2.1+, libjpeg license | https://ffmpeg.org/releases |
@@ -29,6 +30,7 @@ the boot loader and the closed parts.
 | libnl | 3.11.0 | LGPL-2.1+ | https://github.com/thom311/libnl/releases/download/libnl3_11_0 |
 | libopenssl | 3.6.2 | Apache-2.0 | https://github.com/openssl/openssl/releases/download/openssl-3.6.2 |
 | libpng | 1.6.58 | Libpng-2.0 | https://downloads.sourceforge.net/project/libpng/libpng16/1.6.58 |
+| libxcrypt | 4.5.2 | LGPL-2.1+ | https://github.com/besser82/libxcrypt/releases/download/v4.5.2 |
 | libzlib | 1.3.2 | Zlib | https://www.zlib.net |
 | linux-headers | 4.9.337 | GPL-2.0 | https://cdn.kernel.org/pub/linux/kernel/v4.x |
 | ncurses | 6.6-20251231 | MIT with advertising clause | https://github.com/ThomasDickey/ncurses-snapshots/archive/v6_6_20251231 |
