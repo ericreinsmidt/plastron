@@ -87,6 +87,18 @@ start() {
 		repair $games
 		mount -t exfat -o noatime $games $SDCARD
 		[ -f /tmp/games-new ] && touch $SDCARD/.metadata_never_index
+		# The kernel's random numbers ready at once, as on the Pixel: last
+		# boot's seed from the card, and a fresh one written for the next.
+		# The read-only root can't keep it where Linux usually does. Without
+		# it the kernel gathered its own, 106 s into a boot (2026-10-25),
+		# and until then dropbear didn't answer and Wi-Fi drew on random
+		# numbers that weren't ready. The seed the kernel counts is the one
+		# stop saves at shutdown; a new card's first boot, or one after a
+		# power loss, waits once. In the background: seedrng credits the
+		# seed at once, then writes the next and forces it onto the card,
+		# and TortOS needn't wait for that
+		mkdir -p $SDCARD/.plastron/seedrng
+		seedrng -d $SDCARD/.plastron/seedrng > /dev/null 2>&1 &
 	fi
 	mark card
 }
@@ -96,6 +108,11 @@ start() {
 # boot found it marked as not properly unmounted
 stop() {
 	grep -q " $SDCARD " /proc/mounts || return 0
+	# A fresh seed for the next boot, now that the kernel's random numbers are
+	# long ready: only a seed made then is one the kernel can count on. The
+	# one written at boot counts only if the seed it found did, so without
+	# this a new card, or a boot after a power loss, would never recover
+	seedrng -d $SDCARD/.plastron/seedrng > /dev/null 2>&1
 	n=0
 	until umount $SDCARD 2>/dev/null; do
 		n=$((n + 1))
