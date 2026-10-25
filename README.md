@@ -90,8 +90,9 @@ Imagination's GPU libraries, in `BRICK_GPU`, and XRadio's XR829 firmware, in
 `buildroot/package/xr829-firmware/Config.in` say which files and where they
 come from.
 
-To get SSH access to the Pixel 2, put a public key in `local/authorized_keys`
-before building. `local/` is not tracked.
+To get SSH access, put a public key in `local/authorized_keys` before
+building. `local/` is not tracked. A release build carries no key and starts
+no SSH server.
 
 ## On the device
 
@@ -105,7 +106,7 @@ interface, and gives the computer an address:
 | | Device | Computer | Shell, in a development build |
 |---|---|---|---|
 | Pixel 2 | 10.42.0.1 | 10.42.0.2 | `ssh root@10.42.0.1`, with the key above |
-| Brick | 10.55.0.2 | 10.55.0.1 | `telnet 10.55.0.2`, no password |
+| Brick | 10.55.0.2 | 10.55.0.1 | `ssh root@10.55.0.2`, with the key above |
 
 ## Layout
 

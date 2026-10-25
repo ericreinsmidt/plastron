@@ -10,6 +10,9 @@ KEYS=$BR2_EXTERNAL_PX2_PATH/../local/authorized_keys
 
 if [ "${PLASTRON_RELEASE:-0}" = 1 ]; then
 	rm -rf "$TARGET_DIR/root/.ssh"
+	# And dropbear never starts, as nobody could log in to it: the program
+	# stays, as the package list says, but nothing runs it
+	rm -f "$TARGET_DIR/etc/init.d/S50dropbear"
 elif [ -f "$KEYS" ]; then
 	install -d -m 700 "$TARGET_DIR/root/.ssh"
 	install -m 600 "$KEYS" "$TARGET_DIR/root/.ssh/authorized_keys"

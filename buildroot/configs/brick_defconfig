@@ -30,8 +30,12 @@ BR2_TARGET_TZ_INFO=y
 # BR2_TARGET_GENERIC_GETTY is not set
 BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL_PX2_PATH)/board/brick/patches"
 BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_PX2_PATH)/board/brick/rootfs-overlay"
-# telnetd, udhcpd and nc for the USB link while bringing it up: see the fragment
+# udhcpd for the USB link: see the fragment
 BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_PX2_PATH)/board/brick/busybox.fragment"
+# A shell over the USB cable, as on the Pixel 2: dropbear, with the
+# developer's key in a development build (post-build.sh) and none in a
+# release, so nobody can log in to one. /etc/init.d/usbgadget starts it
+BR2_PACKAGE_DROPBEAR=y
 
 # Graphics: Imagination's GLES and EGL, and SDL2 drawing to the framebuffer
 # through them (the pvrfb video driver, see external.mk)

@@ -1,9 +1,24 @@
 #!/bin/sh
+# The developer's SSH public key, as on the Pixel 2: from local/authorized_keys
+# (gitignored) into a development build, and taken out of a release
+# (PLASTRON_RELEASE=1, set by scripts/release.sh), where without a key nobody
+# can log in, as root has no password and dropbear turns down an empty one.
+set -eu
+KEYS=$BR2_EXTERNAL_PX2_PATH/../local/authorized_keys
+if [ "${PLASTRON_RELEASE:-0}" = 1 ]; then
+	rm -rf "$TARGET_DIR/root/.ssh"
+	# And dropbear never starts, as nobody could log in to it: the program
+	# stays, as the package list says, but nothing runs it
+	rm -f "$TARGET_DIR/etc/init.d/S50dropbear"
+elif [ -f "$KEYS" ]; then
+	install -d -m 700 "$TARGET_DIR/root/.ssh"
+	install -m 600 "$KEYS" "$TARGET_DIR/root/.ssh/authorized_keys"
+fi
+
 # TortOS's version, as a number, into its init script (package/tortos's
 # tortos.init), so a boot compares the card's against it without reading the
 # image's VERSION file, as the Pixel 2's post-build.sh does. Worked out by the
 # script's own version_of, so the two can't disagree.
-set -eu
 INIT=$TARGET_DIR/etc/init.d/tortos
 SEED_VERSION=$TARGET_DIR/usr/share/tortos/card/TortOS/VERSION
 if [ -f "$INIT" ] && [ -f "$SEED_VERSION" ]; then

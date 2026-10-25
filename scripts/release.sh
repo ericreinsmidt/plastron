@@ -49,6 +49,10 @@ if [ -e "$OUTPUT/target/root/.ssh" ]; then
 	echo "release: $OUTPUT/target/root/.ssh is in the image" >&2
 	exit 1
 fi
+if [ -e "$OUTPUT/target/etc/init.d/S50dropbear" ]; then
+	echo "release: dropbear's start script is in the image" >&2
+	exit 1
+fi
 
 if [ "$DEVICE" = pixel2 ]; then
 	# U-Boot is built outside Buildroot (make bootloader) and committed, so

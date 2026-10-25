@@ -12,16 +12,10 @@ CONFIG_FEATURE_IPC_SYSLOG=y
 CONFIG_FEATURE_IPC_SYSLOG_BUFFER_SIZE=64
 CONFIG_LOGREAD=y
 
-# The USB cable's network while the Brick is being brought up: a DHCP server
-# for the computer on the other end, telnet for a shell, and nc for sending
-# files and a spare shell (/etc/init.d/usbgadget)
+# The USB cable's network: a DHCP server for the computer on the other end
+# (/etc/init.d/usbgadget)
 CONFIG_UDHCPD=y
 CONFIG_DHCPD_LEASES_FILE="/tmp/udhcpd.leases"
-CONFIG_TELNETD=y
-CONFIG_FEATURE_TELNETD_STANDALONE=y
-CONFIG_NC=y
-CONFIG_NC_SERVER=y
-CONFIG_NC_EXTRA=y
 
 # tar's -z, as on the Pixel
 CONFIG_FEATURE_SEAMLESS_GZ=y
