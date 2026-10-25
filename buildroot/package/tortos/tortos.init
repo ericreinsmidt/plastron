@@ -30,8 +30,8 @@ SEED_V=
 
 # Only ever adds: TortOS keeps its own state in TortOS/ (where it was, what
 # was playing), and the Roms, Bios and Saves folders may already hold the
-# player's files, so nothing on the card is removed, and nothing is replaced
-# but TortOS's own files. launch.sh goes last, after a sync, so a copy cut
+# player's files, so nothing on the card is removed but the one retired file
+# below, and nothing is replaced but TortOS's own files. launch.sh goes last, after a sync, so a copy cut
 # short leaves no launch.sh and the next boot starts it over.
 seed() {
 	mkdir -p "$CARD/TortOS" || return 1
@@ -44,6 +44,10 @@ seed() {
 		[ "${d##*/}" = TortOS ] && continue
 		cp -R "$d" "$CARD/" || return 1
 	done
+	# The one file an older TortOS left that this one doesn't: its notice,
+	# which moved to Licenses/TortOS.md in 2.0.0, and which a card updated
+	# from 1.x would otherwise keep beside the new one
+	rm -f "$CARD/TortOS/THIRD-PARTY-LICENSES.md"
 	sync
 	cp "$SEED/TortOS/launch.sh" "$LAUNCH" || return 1
 	sync
