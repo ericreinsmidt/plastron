@@ -5,10 +5,9 @@ IMAGE := plastron-builder
 VOLUME := plastron-work
 # The x86 packing step runs on the same Debian the builder starts from
 BASE_IMAGE := debian@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
-# TortOS and Diatom are built from their own repositories, mounted read-only.
-# TortOS's Pixel 2 files are on its gkd-pixel-2 branch, in this worktree;
-# Diatom's Pixel 2 port is on its main, so it builds from the main checkout.
-TORTOS_SRC ?= $(HOME)/Developer/TortOS/.claude/worktrees/tortos-gkd-pixel2-port-be626c
+# TortOS and Diatom are built from their own repositories, mounted read-only,
+# each from its main checkout.
+TORTOS_SRC ?= $(HOME)/Developer/TortOS
 DIATOM_SRC ?= $(HOME)/Developer/diatom
 # The libretro cores TortOS ships, which its mk/fetch-vendor.sh downloads,
 # hash-pinned, into the main checkout's vendor/ (ignored by git, so a worktree
