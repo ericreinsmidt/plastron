@@ -107,7 +107,9 @@ scripts/make-logo.py        draws docs/plastron.svg and the card above
 
 ## License
 
-MIT for plastron's own files. The kernel and U-Boot patches, the device tree
-and the bootloader keep their own licenses; [LICENSE](LICENSE) lists them.
+plastron's own files are free software under the GNU General Public License,
+version 3 or any later version ([LICENSE](LICENSE)); they were MIT until
+2026-10-25. The kernel and U-Boot patches, the device trees and the boot
+loaders keep their own licenses; [THIRD-PARTY.md](THIRD-PARTY.md) lists them.
 The card image carries the licenses and sources of everything in it, which
 Buildroot collects with `make legal-info`.

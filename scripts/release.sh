@@ -31,6 +31,18 @@ SOURCES=$OUTPUT/legal-info/sources
 rm -rf "$OUTPUT"
 PLASTRON_RELEASE=1 FLAVOR=$FLAVOR PLASTRON_OUTPUT=$OUTPUT sh /src/scripts/build.sh all legal-info
 
+# The package list on the card and in the repository is this build's: one
+# that no longer matches would credit what the image doesn't carry, or miss
+# what it does
+BOARD=$( [ "$DEVICE" = pixel2 ] && echo px2 || echo brick )
+python3 /src/scripts/third-party.py "$OUTPUT/legal-info/manifest.csv" "$DEVICE" > /tmp/third-party-$DEVICE.md
+if ! cmp -s /tmp/third-party-$DEVICE.md "/src/buildroot/board/$BOARD/third-party-packages.md"; then
+	echo "release: buildroot/board/$BOARD/third-party-packages.md doesn't match this build's packages:" >&2
+	diff "/src/buildroot/board/$BOARD/third-party-packages.md" /tmp/third-party-$DEVICE.md >&2 || true
+	echo "release: run make third-party, check and commit the list, and build again" >&2
+	exit 1
+fi
+
 # Checked, not trusted: the build has no key of its own to leave behind, but a
 # leftover in the output from a development build would ship to everyone
 if [ -e "$OUTPUT/target/root/.ssh" ]; then

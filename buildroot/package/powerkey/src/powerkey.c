@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * powerkey: a press of the power button shuts the device down cleanly.
  *

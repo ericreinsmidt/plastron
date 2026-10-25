@@ -7,7 +7,7 @@
 SPLASH_VERSION = 1.0
 SPLASH_SITE = $(BR2_EXTERNAL_PX2_PATH)/package/splash/src
 SPLASH_SITE_METHOD = local
-SPLASH_LICENSE = MIT
+SPLASH_LICENSE = GPL-3.0+
 SPLASH_LICENSE_FILES = LICENSE
 # The TrimUI Brick's display is a framebuffer, not DRM: splash-fb.c there,
 # with the frames at its panel's 1024x768

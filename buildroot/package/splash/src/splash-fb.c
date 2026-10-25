@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * splash-fb: TortOS's boot animation on the TrimUI Brick, from the moment its
  * framebuffer exists until TortOS draws its first frame.

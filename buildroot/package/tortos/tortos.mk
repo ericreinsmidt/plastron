@@ -11,7 +11,7 @@ TORTOS_SITE_METHOD = local
 TORTOS_DEPENDENCIES = sdl2 sdl2_image sdl2_ttf ffmpeg sqlite alsa-lib zlib diatom
 # libdbus for btplayer, built only for the Brick (below)
 TORTOS_DEPENDENCIES += $(if $(BR2_PACKAGE_PVR_GE8300),dbus)
-TORTOS_LICENSE = MIT
+TORTOS_LICENSE = GPL-3.0+
 TORTOS_LICENSE_FILES = LICENSE THIRD-PARTY-LICENSES.md
 # Its source is public (github.com/ericreinsmidt/TortOS), so legal-info names
 # it rather than packing up the copy below, which is a working tree's

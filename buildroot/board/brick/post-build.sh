@@ -36,3 +36,18 @@ rm -rf "${TARGET_DIR:?}/var/lib/bluetooth" "${TARGET_DIR:?}/var/lib/bluealsa"
 ln -s state/bluetooth "$TARGET_DIR/var/lib/bluetooth"
 ln -s state/bluealsa "$TARGET_DIR/var/lib/bluealsa"
 ln -sfn ../../var/lib/state/xr_bt.conf "$TARGET_DIR/etc/bluetooth/xr_bt.conf"
+
+# The licenses, on the card where a player can find them: a Licenses folder
+# beside TortOS's, which the first boot and every TortOS update copy onto the
+# card with it. plastron's notice and this image's package list, Diatom's
+# notice, and TortOS's
+SEED_CARD=$TARGET_DIR/usr/share/tortos/card
+if [ -d "$SEED_CARD" ]; then
+	L=$SEED_CARD/Licenses
+	mkdir -p "$L"
+	cp "$BR2_EXTERNAL_PX2_PATH/../THIRD-PARTY.md" "$L/plastron.md"
+	cp "$BR2_EXTERNAL_PX2_PATH/board/brick/third-party-packages.md" "$L/plastron-packages.md"
+	[ -f /diatom/THIRD-PARTY.md ] && cp /diatom/THIRD-PARTY.md "$L/Diatom.md"
+	[ -f "$SEED_CARD/TortOS/THIRD-PARTY-LICENSES.md" ] && cp "$SEED_CARD/TortOS/THIRD-PARTY-LICENSES.md" "$L/TortOS.md"
+	ls "$L"
+fi

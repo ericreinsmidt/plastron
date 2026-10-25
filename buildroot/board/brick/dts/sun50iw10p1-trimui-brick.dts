@@ -1,12 +1,12 @@
 /*
  * The TrimUI Brick (Allwinner A133P): its device tree, as source.
  *
- * Made from the tree TrimUI's system boots the Brick with (their DTB,
- * decompiled), with what our system doesn't use taken out: TrimUI's boot
- * loader leftovers, their userspace's settings, USB host, and the rest that
- * carapace's make-dt.py removed. The labels are TrimUI's (Allwinner's names,
- * from the tree's __symbols__). Each node keeps its phandle number from that
- * tree, so a reference still written as a number points where it did.
+ * Made from Allwinner's A133 device tree as it came on the Brick (decompiled),
+ * with what our system doesn't use taken out: the old boot loader's
+ * leftovers, the old system's settings, USB host, and the rest that
+ * carapace's make-dt.py removed. The labels are Allwinner's names, from the
+ * tree's __symbols__. Each node keeps its phandle number from that tree, so a
+ * reference still written as a number points where it did.
  *
  * The nodes U-Boot looks up by path when it boots Linux (/aliases, /chosen,
  * the memory) come first among the root's nodes: U-Boot walks every node ahead
@@ -2380,8 +2380,8 @@
 			phandle = <0x154>;
 
 			cpu {
-				/* 1, as TrimUI's boot0 leaves it on their running system, where their
-				 * tree says 0: at 0 the display misses its reads under load (broken
+				/* 1, as the stock boot loader leaves it on the running system, where the
+				 * tree as it came says 0: at 0 the display misses its reads under load (broken
 				 * rows, the DSI error counter climbing); at 1 it doesn't, measured
 				 * 2026-10-12: 175 errors in 904 frames, then none */
 				select = <0x01>;
@@ -3049,7 +3049,7 @@
 			interrupts = <0x00 0x19 0x04>;
 			sunxi,cpudai-controller = <0x7e>;
 			sunxi,audio-codec = <0x7f>;
-			/* 1, the codec's high detect mode, where TrimUI's tree says 0: at 0
+			/* 1, the codec's high detect mode, where the tree as it came says 0: at 0
 			 * every plug reads backwards (headphones in at boot with the jack
 			 * empty, out when plugged in); at 1 each one reads right, measured
 			 * 2026-10-16 by setting the mode by hand and plugging in twice */

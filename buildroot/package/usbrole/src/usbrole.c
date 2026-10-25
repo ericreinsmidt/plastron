@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * usbrole: the USB port is a host while something that wants power is
  * plugged into it, and a device otherwise.

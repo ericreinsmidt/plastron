@@ -23,7 +23,7 @@ SOURCES := -v $(TORTOS_SRC):/tortos:ro -v $(DIATOM_SRC):/diatom:ro -v $(TORTOS_V
 	$(if $(wildcard $(TORTOS_SS_ENV)),-v $(TORTOS_SS_ENV):/tortos-ss.env:ro)
 DOCKER_RUN := docker run --rm -t -v $(CURDIR):/src:ro $(SOURCES) -v $(VOLUME):/work $(IMAGE)
 
-.PHONY: all builder volume image base brick brick-inputs brick-kernel brick-bootloader brick-probe bootloader shell linux-rebuild copy-out clean-output release release-pixel2 release-brick
+.PHONY: all builder volume image base brick brick-inputs brick-kernel brick-bootloader brick-probe bootloader shell linux-rebuild copy-out clean-output release release-pixel2 release-brick third-party
 
 all: image
 
@@ -140,6 +140,16 @@ release: builder volume brick-inputs brick-kernel
 	docker run --rm -v $(VOLUME):/work -v $(CURDIR)/out:/out --user root $(IMAGE) \
 		sh -c 'cp /work/release/* /out/release/ && chown -R $(shell id -u):$(shell id -g) /out/release'
 	@ls -l out/release
+
+# Each image's package list (buildroot/board/<board>/third-party-packages.md),
+# made again from the last release build's manifest. Committed, and put on
+# the card in the Licenses folder; make release stops when its build no
+# longer matches the list
+third-party:
+	docker run --rm -v $(VOLUME):/work -v $(CURDIR):/src:ro $(IMAGE) python3 /src/scripts/third-party.py \
+		/work/release-output-pixel2/legal-info/manifest.csv pixel2 > buildroot/board/px2/third-party-packages.md
+	docker run --rm -v $(VOLUME):/work -v $(CURDIR):/src:ro $(IMAGE) python3 /src/scripts/third-party.py \
+		/work/release-output-brick/legal-info/manifest.csv brick > buildroot/board/brick/third-party-packages.md
 
 release-pixel2:
 	$(DOCKER_RUN) sh /src/scripts/release.sh $(VERSION) pixel2 > out/release-pixel2.log 2>&1 || \

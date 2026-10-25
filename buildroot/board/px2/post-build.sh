@@ -33,3 +33,18 @@ find "$TARGET_DIR" -name .DS_Store -delete
 # Brick: on a squashfs root nothing can be made at boot, and datapart's mkdir
 # would fail, leaving the card unmounted and TortOS with nowhere to start from
 mkdir -p "$TARGET_DIR/mnt/SDCARD"
+
+# The licenses, on the card where a player can find them: a Licenses folder
+# beside TortOS's, which the first boot and every TortOS update copy onto the
+# card with it. plastron's notice and this image's package list, Diatom's
+# notice, and TortOS's
+SEED_CARD=$TARGET_DIR/usr/share/tortos/card
+if [ -d "$SEED_CARD" ]; then
+	L=$SEED_CARD/Licenses
+	mkdir -p "$L"
+	cp "$BR2_EXTERNAL_PX2_PATH/../THIRD-PARTY.md" "$L/plastron.md"
+	cp "$BR2_EXTERNAL_PX2_PATH/board/px2/third-party-packages.md" "$L/plastron-packages.md"
+	[ -f /diatom/THIRD-PARTY.md ] && cp /diatom/THIRD-PARTY.md "$L/Diatom.md"
+	[ -f "$SEED_CARD/TortOS/THIRD-PARTY-LICENSES.md" ] && cp "$SEED_CARD/TortOS/THIRD-PARTY-LICENSES.md" "$L/TortOS.md"
+	ls "$L"
+fi

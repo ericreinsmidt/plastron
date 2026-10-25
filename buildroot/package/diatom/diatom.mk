@@ -14,7 +14,7 @@ DIATOM_DEPENDENCIES = sdl2 zlib host-pkgconf
 else
 DIATOM_DEPENDENCIES = sdl2 zlib mesa3d-px2 libdrm host-pkgconf
 endif
-DIATOM_LICENSE = MIT
+DIATOM_LICENSE = MPL-2.0
 DIATOM_LICENSE_FILES = LICENSE
 # Its source is public (github.com/ericreinsmidt/diatom), so legal-info names
 # it rather than packing up the copy below, which is a working tree's
