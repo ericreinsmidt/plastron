@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Reinsmidt <735251+ericreinsmidt@users.noreply.github.com>
+Subject: [PATCH] The audio clock runs at 48 kHz, where it ran 0.96% slow. The
+ audio PLL starts with its factors already at 98.304 MHz's, so the codec's
+ request for that rate changed nothing, and the pattern that carries the
+ PLL's fraction stayed at its default, 0xc00121ff: 97.36 MHz, and 47,538 Hz
+ measured on the Brick. The default is now 0xc001eb85, the pattern for both
+ 48 kHz rates, measured at 48,000 Hz. Games no longer drop sound to keep up,
+ which crackled, and Muse plays at the right speed and pitch
+
+---
+--- a/drivers/clk/sunxi/clk-sun50iw10.c
++++ b/drivers/clk/sunxi/clk-sun50iw10.c
+@@ -66,7 +66,19 @@
+ SUNXI_CLK_FACTORS(pll_video3,     8,  8,  0,  0,  0,  0,  0,  0,  1,  1,  0,  0,    0,    0,  0,      27,     24,     0,      PLL_VIDEO3PAT0, 0xd1303333);
+ SUNXI_CLK_FACTORS(pll_ve,         8,  8,  0,  0,  0,  0,  0,  0,  1,  1,  0,  1,    0,    0,  0,      27,     24,     0,      PLL_VEPAT0,     0xd1303333);
+ SUNXI_CLK_FACTORS(pll_com,        8,  8,  0,  0,  0,  0,  0,  0,  1,  1,  0,  1,    0,    0,  0,      27,     24,     1,      PLL_COMPAT0,    0xd1303333);
+-SUNXI_CLK_FACTORS(pll_audiox4,    8,  8,  0,  0,  0,  0,  16, 6,  1,  1,  0,  1,    0,    0,  0,      27,     24,     1,      PLL_AUDIOPAT0,  0xc00121ff);
++/*
++ * pll_audiox4's sdmval is the pattern written when the PLL is enabled without
++ * a rate change, which is how it starts: its factors are already 98.304 MHz's
++ * (N 39, P 4), calc_rate_audio reports that rate from the factors alone, so
++ * the codec's clk_set_rate(98304000) changes nothing and get_factors_pll_audio
++ * never puts 98.304 MHz's pattern here. With 0xc00121ff, a fraction of 0.5664,
++ * the PLL made 97.36 MHz and the codec played at 47,538 Hz, 0.96% slow
++ * (measured on the Brick, 2026-10-26). 0xc001eb85, a fraction of 0.96, is the
++ * pattern get_factors_pll_audio sets for both 48 kHz rates, 24.576 and 98.304
++ * MHz; the 44.1 kHz rates come only through a rate change, which writes their
++ * own.
++ */
++SUNXI_CLK_FACTORS(pll_audiox4,    8,  8,  0,  0,  0,  0,  16, 6,  1,  1,  0,  1,    0,    0,  0,      27,     24,     1,      PLL_AUDIOPAT0,  0xc001eb85);
+ 
+ /* pll_de renamed as pll_com */
+ 
