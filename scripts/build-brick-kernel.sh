@@ -24,6 +24,9 @@ export KBUILD_BUILD_VERSION=${KBUILD_BUILD_VERSION:-1}
 export KBUILD_BUILD_TIMESTAMP=${KBUILD_BUILD_TIMESTAMP:-Wed Oct 14 00:00:00 UTC 2026}
 export KBUILD_BUILD_USER=${KBUILD_BUILD_USER:-plastron}
 export KBUILD_BUILD_HOST=${KBUILD_BUILD_HOST:-plastron}
+# The same moment for __DATE__ and __TIME__, which XRadio's Wi-Fi driver
+# stamps into xr829_core.ko
+export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-1791936000}
 # 4.9.191+, as carapace's git checkout made it: the modules carry it
 LOCALVERSION=+
 
@@ -41,7 +44,15 @@ tar -C "$SRC" --strip-components=1 -xJf "$f"
 cd "$SRC"
 for p in "$BOARD"/patches/*.patch; do patch -p1 -F0 -s --batch < "$p"; done
 
-k() { make -s -C "$SRC" O="$OUT" ARCH=arm64 LOCALVERSION="$LOCALVERSION" -j"$(nproc)" "$@"; }
+# The same compiler name on any computer, Arm or x86 (docker/brick-kernel)
+CROSS_COMPILE=aarch64-linux-gnu-
+# And the same bytes: the cross compiler keeps its own headers in
+# /usr/lib/gcc-cross, the native one in /usr/lib/gcc, and the debug info names
+# that folder, which the modules' build IDs and the kernel's are taken over.
+# Recorded as the native one's, which on Arm changes nothing. The GPU driver's
+# build goes through the kernel's, so it gets this too.
+export KCFLAGS=-fdebug-prefix-map=/usr/lib/gcc-cross/=/usr/lib/gcc/
+k() { make -s -C "$SRC" O="$OUT" ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE LOCALVERSION="$LOCALVERSION" -j"$(nproc)" "$@"; }
 k brick_defconfig
 # All the modules, not each by name: the Wi-Fi driver's three need cfg80211's
 # symbols, and only a full modules pass resolves them between modules
@@ -51,7 +62,7 @@ k Image modules
 # into its source, so from a copy
 cp -a "$SRC/modules/gpu/img-rgx/." "$GPU/img-rgx/"
 make -s -C "$GPU/img-rgx/linux/rogue_km/build/linux/sunxi_linux" \
-	BUILD=release KERNELDIR="$OUT" ARCH=arm64 > "$GPU/build.log" 2>&1 ||
+	BUILD=release KERNELDIR="$OUT" ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE > "$GPU/build.log" 2>&1 ||
 	{ tail -20 "$GPU/build.log"; exit 1; }
 
 G=$GPU/img-rgx/linux/rogue_km/binary_sunxi_linux_nullws_release/target_aarch64
@@ -65,7 +76,7 @@ for m in "$OUT/drivers/input/joystick/brick-pad.ko" "$G/pvrsrvkm.ko" "$G/dc_sunx
 	"$W/wlan/xr829_wlan.ko" "$OUT/net/bluetooth/bluetooth.ko" \
 	"$OUT/drivers/bluetooth/hci_uart.ko" "$OUT/drivers/bluetooth/xradio_btlpm.ko" \
 	"$OUT/drivers/bluetooth/xradio_btfdi.ko"; do
-	strip --strip-debug -o "$IMAGES/$(basename "$m")" "$m"
+	${CROSS_COMPILE}strip --strip-debug -o "$IMAGES/$(basename "$m")" "$m"
 done
 dtc -q -I dts -O dtb -o "$IMAGES/brick.dtb" /src/buildroot/board/brick/dts/sun50iw10p1-trimui-brick.dts
 strings "$IMAGES/Image" | grep -m1 "^Linux version"
