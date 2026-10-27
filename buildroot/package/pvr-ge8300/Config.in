@@ -25,7 +25,10 @@ config BR2_PACKAGE_PVR_GE8300
 
 	  They are the Imagination PowerVR DDK 1.11@5516664 userspace
 	  libraries for the GE8300 (fbdev window system, glibc, aarch64),
-	  as Allwinner ships them in its A133 SDKs. Nothing else will do:
+	  as Allwinner ships them in its A133 SDKs; the libraries and the
+	  firmware are in lib64/ of Creality's Sonic Pad SDK at
+	  https://github.com/CrealityTech/sonic_pad_os/tree/7f37a7f/package/libs/libgpu/ge8300/fbdev/glibc
+	  and the headers are Khronos's. Nothing else will do:
 	  they must match the kernel's GPU driver exactly, and other copies
 	  around (TrimUI's are DDK 1.19) don't. The build checks each file
 	  against files.sha256 and stops on any difference.

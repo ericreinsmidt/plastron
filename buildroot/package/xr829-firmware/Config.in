@@ -12,7 +12,7 @@ config BR2_PACKAGE_XR829_FIRMWARE
 	  part of plastron, are never committed, and come with no license
 	  from us. The build takes them from a folder mounted at
 	  /brick-xr829 (BRICK_XR829 in the Makefile, ~/brick-runtime/xr829
-	  by default), as Creality's Sonic Pad SDK has them
-	  (github.com/CrealityTech/sonic_pad_os at 7f37a7f,
-	  package/firmware/linux-firmware/xr829). The build checks each
-	  file against files.sha256 before installing anything.
+	  by default), as Creality's Sonic Pad SDK has them:
+	  https://github.com/CrealityTech/sonic_pad_os/tree/7f37a7f/package/firmware/linux-firmware/xr829
+	  The build checks each file against files.sha256 before
+	  installing anything.

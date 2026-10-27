@@ -87,8 +87,12 @@ Buildroot only rebuilds what changed.
 The Brick's build needs its two closed parts, which plastron doesn't include:
 Imagination's GPU libraries, in `BRICK_GPU`, and XRadio's XR829 firmware, in
 `BRICK_XR829`. `buildroot/package/pvr-ge8300/Config.in` and
-`buildroot/package/xr829-firmware/Config.in` say which files and where they
-come from.
+`buildroot/package/xr829-firmware/Config.in` say which files they are. Both
+come from Creality's Sonic Pad SDK: the GPU libraries from
+[`package/libs/libgpu/ge8300/fbdev/glibc`](https://github.com/CrealityTech/sonic_pad_os/tree/7f37a7f/package/libs/libgpu/ge8300/fbdev/glibc)
+and the firmware from
+[`package/firmware/linux-firmware/xr829`](https://github.com/CrealityTech/sonic_pad_os/tree/7f37a7f/package/firmware/linux-firmware/xr829).
+Only those copies match the checksums the build checks them against.
 
 To get SSH access, put a public key in `local/authorized_keys` before
 building. `local/` is not tracked. A release build carries no key and starts
